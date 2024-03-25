@@ -67,21 +67,12 @@ def softprob_obj(predt: np.ndarray, data: xgb.DMatrix):
             grad[r, c] = g
             hess[r, c] = h
 
-    # Right now (XGBoost 1.0.0), reshaping is necessary
     return grad, hess
 
-def gradient_based_one_side_sampling(a = 0.05, b = 0.05, ):
+def gradient_based_one_side_sampling(dataset: str, a = 0.05, b = 0.05, ):
     train_dmatrix, test_dmatrix = create_centralized_dataset(ThesisDataset.IRIS.value)
     
     bst = xgb.Booster(params, [train_dmatrix])
-
-    # bst = xgb.train(
-    #     params,
-    #     xgb.DMatrix(empty),
-    #     num_boost_round=1,
-    #     evals=[(test_dmatrix, "test"), (train_dmatrix, "train")],
-    #     #feval try
-    # )
 
     fact = (1 - a) / b
     topN = a * train_dmatrix.num_row()
@@ -102,7 +93,7 @@ def gradient_based_one_side_sampling(a = 0.05, b = 0.05, ):
     weights[randSet] *= fact
     new_train_dmatrix = train_dmatrix.slice(usedSet)
     new_train_dmatrix.set_weight(weights[usedSet])
-    
+
     # bst = xgb.Booster(params, [new_train_dmatrix])
     # bst.boost(new_train_dmatrix, gradients[usedSet], hessians[usedSet])
     
@@ -120,21 +111,7 @@ def gradient_based_one_side_sampling(a = 0.05, b = 0.05, ):
     # idea: use divergence score federated vs centralized
     # invite William to repo
 
-
-    models = []    
-    return models
-
-def my_function(data: np.ndarray, dmatrix: xgb.DMatrix) -> tuple[np.ndarray, np.ndarray]:
-    # Some operations that modify dmatrix
-    dmatrix.get_data()
-    dmatrix = xgb.DMatrix(data=data)
-    # Do something with new_dmatrix
-    return np.array([1, 2, 3]), np.array([1, 2, 3])
-
-# Outside the function
-data = np.array([[1, 2], [3, 4]])
-original_dmatrix = xgb.DMatrix(data=data)
-
-result_array, modified_dmatrix = my_function(data, original_dmatrix)
+     
+    return bst
 
 gradient_based_one_side_sampling()
