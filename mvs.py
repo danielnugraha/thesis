@@ -57,37 +57,22 @@ def calculate_threshold(candidates, sum_small, num_large, sample_size):
             print("estimated <= sample_size, small_array size = 0: ", sum_small / (sample_size - num_large - num_middle - num_large_update))
             return sum_small / (sample_size - num_large - num_middle - num_large_update)
 
-minimal_variance_sampling()
-
 class MVS(SubsamplingStrategy):
 
-    def __init__(self, params, train_dmatrix, lambda_rate, sample_rate, objective) -> None:
-        self.train_dmatrix = train_dmatrix
+    def __init__(self, objective, lambda_rate = 0.1, sample_rate = 0.1) -> None:
         self.lambda_rate = lambda_rate
         self.sample_rate = sample_rate
-        self.params = params
         self.objective = objective
-        self.dataset = None
 
-    def subsample(self, bst: Optional[xgb.Booster] = None) -> xgb.Booster:
-        if bst is None:
-             bst = xgb.Booster(self.params, [self.train_dmatrix])
-
-        preds = bst.predict(self.train_dmatrix, output_margin=True, training=True)
-        gradients, hessians = self.objective(preds, self.train_dmatrix)
+    def subsample(self, predictions: np.ndarray, train_dmatrix: xgb.DMatrix) -> xgb.DMatrix:
+        gradients, hessians = self.objective(predictions, train_dmatrix)
         regularized_gradients = np.sqrt(np.square(gradients) + self.lambda_rate * np.square(hessians))
 
-        threshold = calculate_threshold(regularized_gradients, sampleRate=self.sample_rate)
-        
-        probs = np.minimum(regularized_gradients / threshold, 1)
-        weights = 1 / probs
+        regularized_gradients = np.sqrt(np.square(gradients[gradients < 0]) + self.lambda_rate * np.square(hessians[gradients < 0]))
 
-        indices = np.where(probs == 1)[0]
+        subsample = np.argsort(regularized_gradients)[-int(len(regularized_gradients) * self.sample_rate):]
 
-        new_train_dmatrix = self.train_dmatrix.slice(indices)
-        new_train_dmatrix.set_weight(weights[indices])
-        return super().subsample(bst)
+        new_train_dmatrix = train_dmatrix.slice(subsample)
+
+        return new_train_dmatrix
     
-    @property
-    def dataset(self):
-        return self.dataset

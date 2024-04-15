@@ -37,15 +37,25 @@ gradient_based_one_side_sampling()
 
 class GOSS(SubsamplingStrategy):
 
-    def __init__(self, train_dmatrix, lambda_rate, sample_rate) -> None:
-        self.train_dmatrix = train_dmatrix
-        self.lambda_rate = lambda_rate
-        self.sample_rate = sample_rate
-        self.dataset = None
+    def __init__(self, objective, a = 0.05, b = 0.05) -> None:
+        self.objective = objective
+        self.a = a
+        self.b = b
 
-    def subsample(self, bst):
-        return super().subsample(bst)
-    
-    @property
-    def dataset(self):
-        return self.dataset
+    def subsample(self, predictions: np.ndarray, train_dmatrix: xgb.DMatrix) -> xgb.DMatrix:
+        fact = (1 - self.a) / self.b
+        topN = self.a * train_dmatrix.num_row()
+        randN = self.b * train_dmatrix.num_row()
+
+        gradients, _ = self.objective(predictions, train_dmatrix)
+
+        weights = np.ones_like(train_dmatrix.get_label())
+        sorted_indices = np.argsort(np.abs(np.sum(gradients, axis=1, keepdims=False)))
+        topSet = sorted_indices[:int(topN)]
+        randSet = np.random.choice(sorted_indices[int(topN):], int(randN), replace=False)
+        usedSet = np.concatenate([topSet, randSet])
+        weights[randSet] *= fact
+        new_train_dmatrix = train_dmatrix.slice(usedSet)
+        new_train_dmatrix.set_weight(weights[usedSet])
+
+        return new_train_dmatrix

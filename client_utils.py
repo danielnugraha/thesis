@@ -19,7 +19,7 @@ from flwr.common import (
 class XgbClient(fl.client.Client):
     def __init__(
         self,
-        train_dmatrix,
+        train_dmatrix: xgb.DMatrix,
         valid_dmatrix,
         num_train,
         num_val,
@@ -47,9 +47,13 @@ class XgbClient(fl.client.Client):
             parameters=Parameters(tensor_type="", tensors=[]),
         )
 
-    def _local_boost(self, bst_input):
+    def _local_boost(self, bst_input: xgb.Booster):
         # Update trees based on local training data.
-        bst = self.subsampling_method.subsample(bst_input)
+        for i in range(self.num_local_round):
+            print(self.train_dmatrix.feature_names)
+            preds = bst_input.predict(self.train_dmatrix, output_margin=True, training=True)
+            new_train_dmatrix = self.subsampling_method.subsample(preds, self.train_dmatrix)
+            bst_input.update(new_train_dmatrix, bst_input.num_boosted_rounds())
 
         # Bagging: extract the last N=num_local_round trees for sever aggregation
         # Cyclic: return the entire model
@@ -68,7 +72,8 @@ class XgbClient(fl.client.Client):
         global_round = int(ins.config["global_round"])
         if global_round == 1:
             # First round local training
-            bst = self.subsampling_method.subsample()
+            bst = xgb.Booster(params=self.params)
+            bst = self._local_boost(bst)
         else:
             bst = xgb.Booster(params=self.params)
             for item in ins.parameters.tensors:
