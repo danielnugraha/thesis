@@ -24,10 +24,10 @@ warnings.filterwarnings("ignore", category=UserWarning)
 # Parse arguments for experimental settings
 args = server_args_parser()
 train_method = args.train_method
-pool_size = 1
-num_rounds = 1
-num_clients_per_round = 1
-num_evaluate_clients = 1
+pool_size = args.pool_size
+num_rounds = args.num_rounds
+num_clients_per_round = args.num_clients_per_round
+num_evaluate_clients = args.num_evaluate_clients
 centralised_eval = args.centralised_eval
 
 print("Min available clients: ", pool_size)

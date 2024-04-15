@@ -98,12 +98,24 @@ def softprob_obj(predt: np.ndarray, data: xgb.DMatrix):
     return grad, hess
 
 def binary_obj(predt: np.ndarray, data: xgb.DMatrix):
+    labels = data.get_label()
     eps = 1e-6
+
+    if data.get_weight().size == 0:
+        # Use 1 as weight if we don't have custom weight.
+        weights = np.ones_like(labels)
+    else:
+        weights = data.get_weight()
+
+    grad = predt - labels
+    hess = max(predt * (1.0 - predt), eps)
+
+    return grad * weights, hess * weights
 
 # Hyper-parameters for xgboost training
 NUM_LOCAL_ROUND = 1
 BST_PARAMS = {
-    "objective": "binary:logistic",
+    "objective": "multi:softmax",
     "eta": 0.1,  # Learning rate
     "max_depth": 8,
     "eval_metric": "auc",
@@ -111,6 +123,7 @@ BST_PARAMS = {
     "num_parallel_tree": 1,
     "subsample": 1,
     "tree_method": "hist",
+    'num_class': 7,
 }
 
 

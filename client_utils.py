@@ -72,7 +72,7 @@ class XgbClient(fl.client.Client):
         global_round = int(ins.config["global_round"])
         if global_round == 1:
             # First round local training
-            bst = xgb.Booster(params=self.params)
+            bst = xgb.Booster(self.params, [self.train_dmatrix])
             bst = self._local_boost(bst)
         else:
             bst = xgb.Booster(params=self.params)
