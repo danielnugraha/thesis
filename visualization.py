@@ -42,3 +42,25 @@ def plot_labels(num_clients, dataloader: Dataloader, subsampling_strategy: Subsa
     plt.savefig("../_static/sampling_values.png")
     print(">>> Sampling plot created")
     
+
+def plot_feature_importance(model: xgb.Booster):
+    important_features = model.get_score(importance_type='gain')
+
+    sorted_features = sorted(important_features.items(), key=lambda x: x[1], reverse=True)
+
+    top_40_features = sorted_features[:40]
+
+    keys, values = zip(*top_40_features)
+
+    fig, ax = plt.subplots(figsize=(20, 10))
+    ax.barh(keys, values)
+
+    ax.set_xlabel('Importance')
+    ax.set_title('Top 40 Features by Importance')
+
+    plt.savefig("../_static/important_features.png")
+
+
+def plot_tree(model:xgb.Booster):
+    xgb.plot_tree(model, rankdir='LR')
+    plt.savefig("../_static/tree_plot.png")
