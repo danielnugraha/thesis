@@ -4,6 +4,7 @@ import argparse
 from thesis_dataset import ThesisDataset
 from datasets import Dataset, DatasetDict
 from typing import Union
+import math
 
 params = {
     "objective": "multi:softmax",
@@ -111,6 +112,34 @@ def binary_obj(predt: np.ndarray, data: xgb.DMatrix):
     hess = max(predt * (1.0 - predt), eps)
 
     return grad * weights, hess * weights
+
+def rmse_obj(predt: np.ndarray, data: xgb.DMatrix):
+    labels = data.get_label()
+    
+    if data.get_weight().size == 0:
+        # Use 1 as weight if we don't have custom weight.
+        weights = np.ones_like(labels)
+    else:
+        weights = data.get_weight()
+
+    grad = predt - labels
+    hess = 1.0
+    return grad * weights, hess * weights
+
+def rmsle_obj(predt: np.ndarray, data: xgb.DMatrix):
+    labels = data.get_label()
+    
+    if data.get_weight().size == 0:
+        # Use 1 as weight if we don't have custom weight.
+        weights = np.ones_like(labels)
+    else:
+        weights = data.get_weight()
+
+    predt = max(predt, -1 + 1e-6)
+    grad = (math.log1p(predt) - math.log1p(labels)) / (predt + 1)
+    hess = max((-math.log1p(predt) + math.log1p(labels) + 1) / ((predt + 1) ** 2), 1e-6)
+    return grad * weights, hess * weights
+
 
 # Hyper-parameters for xgboost training
 NUM_LOCAL_ROUND = 1
