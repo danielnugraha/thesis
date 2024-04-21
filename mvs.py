@@ -75,4 +75,40 @@ class MVS(SubsamplingStrategy):
         new_train_dmatrix = train_dmatrix.slice(subsample)
 
         return new_train_dmatrix
+
+    def global_sampling(self, grad_hess_dict: dict[int, list[(float, float)]]) -> dict[int, list[int]]:
+        sampling_values = {}
+        all_gradients = []
+        all_hessians = []
+
+        for id, (grad, hess) in grad_hess_dict.items():
+            all_gradients.extend(grad)
+            all_hessians.extend(hess)
+
+        all_gradients = np.array(all_gradients)
+        all_hessians = np.array(all_hessians)
+
+        mask = all_gradients < 0
+        regularized_gradients = np.sqrt(np.square(all_gradients[mask]) + self.lambda_rate * np.square(all_hessians[mask]))
+
+        num_samples = int(len(regularized_gradients) * self.sample_rate)
+
+        subsample_indices = np.argsort(regularized_gradients)[-num_samples:]
+
+        start_index = 0
+        for id, (grad, hess) in grad_hess_dict.items():
+            num_elements = len(grad)
+
+            end_index = start_index + num_elements
+            current_subsample_indices = [
+                idx - start_index
+                for idx in subsample_indices
+                if start_index <= idx < end_index
+            ]
+
+            sampling_values[id] = current_subsample_indices
+
+            start_index = end_index
+
+        return sampling_values
     

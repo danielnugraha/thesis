@@ -59,3 +59,15 @@ class GOSS(SubsamplingStrategy):
         new_train_dmatrix.set_weight(weights[usedSet])
 
         return new_train_dmatrix
+    
+    def global_sampling(self, grad_hess_dict: dict[int, list[(float, float)]]) -> dict[int, list[int]]:
+        sampling_values = {}
+        all_gradients = []
+        all_hessians = []
+
+        for id, (grad, hess) in grad_hess_dict.items():
+            all_gradients.extend(grad)
+            all_hessians.extend(hess)
+
+        all_gradients = np.array(all_gradients)
+        all_hessians = np.array(all_hessians)
