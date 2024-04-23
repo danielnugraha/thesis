@@ -6,7 +6,10 @@ echo "Starting server"
 python3 server.py --pool-size=3 --num-rounds=10 --num-clients-per-round=3 --centralised-eval &
 sleep 30  # Sleep for 30s to give the server enough time to start
 
-for i in `seq 0 2`; do
+echo "Starting client 0"
+python3 client.py --partition-id=0 --num-partitions=3 --partitioner-type=exponential --visualise &
+
+for i in `seq 1 2`; do
     echo "Starting client $i"
     python3 client.py --partition-id=$i --num-partitions=3 --partitioner-type=exponential &
 done

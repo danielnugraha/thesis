@@ -14,6 +14,8 @@ from flwr.common import (
     Parameters,
     Status,
 )
+from visualization import plot_labels
+from dataloader import Dataloader
 
 
 class XgbClient(fl.client.Client):
@@ -27,6 +29,8 @@ class XgbClient(fl.client.Client):
         params,
         train_method,
         subsampling_method: SubsamplingStrategy,
+        dataloader: Dataloader,
+        visualise: bool,
     ):
         self.train_dmatrix = train_dmatrix
         self.valid_dmatrix = valid_dmatrix
@@ -36,6 +40,8 @@ class XgbClient(fl.client.Client):
         self.params = params
         self.train_method = train_method
         self.subsampling_method = subsampling_method
+        self.dataloader = dataloader
+        self.visualise = visualise
 
     def get_parameters(self, ins: GetParametersIns) -> GetParametersRes:
         _ = (self, ins)
@@ -55,7 +61,7 @@ class XgbClient(fl.client.Client):
             new_train_dmatrix = self.subsampling_method.subsample(preds, self.train_dmatrix)
             bst_input.update(new_train_dmatrix, bst_input.num_boosted_rounds())
 
-        # Bagging: extract the last N=num_local_round trees for sever aggregation
+        # Bagging: extract the last N=num_local_round trees for server aggregation
         # Cyclic: return the entire model
         bst = (
             bst_input[
@@ -67,6 +73,11 @@ class XgbClient(fl.client.Client):
         )
 
         return bst
+    
+    def query_grad_and_hess(self, objective):
+        bst = xgb.Booster(self.params, [self.train_dmatrix])
+        preds = bst.predict(self.train_dmatrix, output_margin=True, training=True)
+        return objective(preds, self.train_dmatrix)
 
     def fit(self, ins: FitIns) -> FitRes:
         global_round = int(ins.config["global_round"])
@@ -88,6 +99,11 @@ class XgbClient(fl.client.Client):
         # Save model
         local_model = bst.save_raw("json")
         local_model_bytes = bytes(local_model)
+        
+        if self.visualise:
+            print("Creating visualization for round: ", global_round)
+            plot_labels(3, self.dataloader, self.subsampling_method, bst, global_round)
+            print("Finished creating visualization for round: ", global_round)
 
         return FitRes(
             status=Status(

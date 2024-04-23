@@ -4,8 +4,8 @@ import numpy as np
 from dataloader import Dataloader
 from subsampling_strategy import SubsamplingStrategy
 
-def plot_labels(num_clients, dataloader: Dataloader, subsampling_strategy: SubsamplingStrategy, model: xgb.Booster):
-    sampling_values = [0.85, 0.5, 0.3, 0.2, 0.1, 0.05]
+def plot_labels(num_clients, dataloader: Dataloader, subsampling_strategy: SubsamplingStrategy, model: xgb.Booster, round: int):
+    sampling_values = [0.2, 0.1, 0.05]
     num_classes = dataloader.get_num_classes()
     color = plt.get_cmap("RdYlGn")(np.linspace(0.15, 0.85, num_classes))
     num_plots = len(sampling_values)
@@ -23,7 +23,7 @@ def plot_labels(num_clients, dataloader: Dataloader, subsampling_strategy: Subsa
             labels = dmatrix.get_label()
             lefts = [0]
             axis = axs[i]
-            class_counts = np.bincount(labels, minlength=num_classes)
+            class_counts = np.bincount(labels.astype(np.int64), minlength=num_classes)
             np.sum(class_counts > 0)
 
             class_distribution = class_counts.astype(np.float16) / len(labels)
@@ -39,9 +39,9 @@ def plot_labels(num_clients, dataloader: Dataloader, subsampling_strategy: Subsa
 
     fig.text(0, 0.5, "Client", va="center", rotation="vertical")
     plt.tight_layout()
-    plt.savefig("../_static/sampling_values.png")
+    plt.savefig(f"_static/sampling_values_{round}.png")
     print(">>> Sampling plot created")
-    
+
 
 def plot_feature_importance(model: xgb.Booster):
     important_features = model.get_score(importance_type='gain')

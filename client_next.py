@@ -1,3 +1,8 @@
+from flwr.client import ClientApp
+from flwr.common import Message, Context, RecordSet, ConfigsRecord
+from client_utils import XgbClient
+from utils import client_args_parser
+
 import warnings
 from logging import INFO
 
@@ -12,10 +17,9 @@ from utils import client_args_parser, BST_PARAMS, NUM_LOCAL_ROUND, softprob_obj
 from client_utils import XgbClient
 from mvs import MVS
 from dataloader import CovertypeDataloader
-
+from flwr.common.recordset_compat import recordset_to_fitins, fitres_to_recordset, recordset_to_evaluateins, evaluateres_to_recordset
 
 warnings.filterwarnings("ignore", category=UserWarning)
-
 
 # Parse arguments for experimental settings
 # Add arguments for subsampling strategy and dataset you want to use
@@ -44,24 +48,34 @@ if args.train_method == "bagging" and args.scaled_lr:
     new_lr = params["eta"] / args.num_partitions
     params.update({"eta": new_lr})
 
-# Start Flower client
-fl.client.start_client(
-    server_address="127.0.0.1:8080",
-    client=XgbClient(
-        train_dmatrix,
-        valid_dmatrix,
-        num_train,
-        num_val,
-        num_local_round,
-        params,
-        train_method,
-        MVS(softprob_obj),
-        dataloader,
-        args.visualise,
-    ),
-)
+app = ClientApp()
+client = XgbClient(
+            train_dmatrix,
+            valid_dmatrix,
+            num_train,
+            num_val,
+            num_local_round,
+            params,
+            train_method,
+            MVS(softprob_obj)
+        )
 
-#Try global sampling but keep local as focus
-#Visualise
-#Proof that federated converge (faster)
-#Add pyproject.toml 
+@app.train()
+def train(msg: Message, ctx: Context):
+    fit_res = client.fit(recordset_to_fitins(msg.content, True))
+    return msg.create_reply(fitres_to_recordset(fit_res, False))
+
+
+@app.evaluate()
+def eval(msg: Message, ctx: Context):
+    evaluate_res = client.evaluate(recordset_to_evaluateins(msg.content, True))
+    return msg.create_reply(evaluateres_to_recordset(evaluate_res))
+
+
+@app.query()
+def query(msg: Message, ctx: Context):
+    grad, hess = client.query_grad_and_hess(softprob_obj)
+    reply = RecordSet(
+        configs_records={"grad_and_hess": ConfigsRecord({"grad": grad, "hess": hess})},
+    )
+    return msg.create_reply(reply)

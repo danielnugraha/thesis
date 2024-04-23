@@ -1,5 +1,5 @@
 from flwr_datasets import FederatedDataset
-from flwr_datasets.partitioner import Partitioner
+from flwr_datasets.partitioner import Partitioner, IidPartitioner
 from flwr_datasets.resplitter import Resplitter
 from typing import Optional, Union, Dict, Tuple
 import xgboost as xgb
@@ -111,8 +111,6 @@ class CovertypeDataloader(Dataloader):
         train_data, test_data = train_test_split(
             partition, test_fraction=0.2, seed=42
         )
-
-        print(partition.features)
         
         return self._transform_dataset_to_dmatrix(data=train_data), train_data.shape[0]
     
@@ -134,6 +132,9 @@ class CovertypeDataloader(Dataloader):
     
     def get_params(self):
         pass
+
+    def get_num_classes(self):
+        return 3
 
     def set_partitioner(self, partitioner: Partitioner) -> None:
         self.fds = FederatedDataset(
@@ -330,6 +331,8 @@ class YearPredictionMSDDataloader(Dataloader):
 
     def __init__(self, partitioner: Partitioner, resplitter: Optional[Union[Resplitter, Dict[str, Tuple[str, ...]]]] = None,) -> None:
         self.dataset = load_dataset("text", data_files={"train": "https://www.dropbox.com/scl/fi/gh9b5sqcy7bkujxs8z6uu/YearPredictionMSD.txt?rlkey=8rto7705uxpt5jwj81xn4p4wm&dl=1"})
+        print(self.dataset["train"][1])
+        print(len(self.dataset["train"]))
         self.partitioner = partitioner
         self.resplitter = resplitter
 
@@ -367,6 +370,9 @@ class YearPredictionMSDDataloader(Dataloader):
     def get_params(self):
         pass
 
+    def get_num_classes(self):
+        pass
+
     def set_partitioner(self, partitioner: Partitioner) -> None:
         self.partitioner = partitioner
 
@@ -378,3 +384,5 @@ class YearPredictionMSDDataloader(Dataloader):
         new_data = xgb.DMatrix(x, label=y)
         return new_data
     
+# CovertypeDataloader(partitioner=IidPartitioner(10)).get_train_dmatrix()   
+# YearPredictionMSDDataloader(partitioner=IidPartitioner(10))
