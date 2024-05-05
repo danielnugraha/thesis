@@ -7,6 +7,17 @@ from typing import Union
 import math
 
 params = {
+    "objective": "reg:squarederror",
+    "eta": 0.1,  # Learning rate
+    "max_depth": 8,
+    "eval_metric": "rmse",
+    "nthread": 16,
+    "num_parallel_tree": 1,
+    "subsample": 1,
+    "tree_method": "hist",
+}
+
+multi_params = {
     "objective": "multi:softmax",
     "eta": 0.1,  # Learning rate
     "max_depth": 8,
@@ -15,7 +26,7 @@ params = {
     "num_parallel_tree": 1,
     "subsample": 1,
     "tree_method": "hist",
-    'num_class': 3,
+    "num_class": 7,
 }
 
 dataset_params = {
@@ -75,7 +86,7 @@ def softprob_obj(predt: np.ndarray, data: xgb.DMatrix):
     # represents a raw prediction (leaf weight, hasn't gone through softmax
     # yet).  In XGBoost 1.0.0, the prediction is transformed by a softmax
     # function, fixed in later versions.
-    
+    print("preds: ", predt.shape)
     grad = np.zeros_like(predt)
     hess = np.zeros_like(predt)
 
@@ -144,7 +155,7 @@ def rmsle_obj(predt: np.ndarray, data: xgb.DMatrix):
 # Hyper-parameters for xgboost training
 NUM_LOCAL_ROUND = 1
 BST_PARAMS = {
-    "objective": "multi:softmax",
+    "objective": "binary:logistic",
     "eta": 0.1,  # Learning rate
     "max_depth": 8,
     "eval_metric": "auc",
@@ -152,7 +163,6 @@ BST_PARAMS = {
     "num_parallel_tree": 1,
     "subsample": 1,
     "tree_method": "hist",
-    'num_class': 7,
 }
 
 

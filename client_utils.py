@@ -14,7 +14,8 @@ from flwr.common import (
     Parameters,
     Status,
 )
-from visualization import plot_labels
+from visualization import plot_labels, plot_tree
+import matplotlib.pyplot as plt
 from dataloader import Dataloader
 
 
@@ -61,6 +62,8 @@ class XgbClient(fl.client.Client):
             new_train_dmatrix = self.subsampling_method.subsample(preds, self.train_dmatrix)
             bst_input.update(new_train_dmatrix, bst_input.num_boosted_rounds())
 
+        print(bst_input.get_dump(dump_format="text"))
+
         # Bagging: extract the last N=num_local_round trees for server aggregation
         # Cyclic: return the entire model
         bst = (
@@ -85,6 +88,7 @@ class XgbClient(fl.client.Client):
             # First round local training
             bst = xgb.Booster(self.params, [self.train_dmatrix])
             bst = self._local_boost(bst)
+            print("first round")
         else:
             bst = xgb.Booster(params=self.params)
             for item in ins.parameters.tensors:
@@ -92,6 +96,7 @@ class XgbClient(fl.client.Client):
 
             # Load global model into booster
             bst.load_model(global_model)
+            bst.save_model(f"_static/model_{bst.num_boosted_rounds()}.json")
 
             # Local training
             bst = self._local_boost(bst)
@@ -100,10 +105,7 @@ class XgbClient(fl.client.Client):
         local_model = bst.save_raw("json")
         local_model_bytes = bytes(local_model)
         
-        if self.visualise:
-            print("Creating visualization for round: ", global_round)
-            plot_labels(3, self.dataloader, self.subsampling_method, bst, global_round)
-            print("Finished creating visualization for round: ", global_round)
+        
 
         return FitRes(
             status=Status(

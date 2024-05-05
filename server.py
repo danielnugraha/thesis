@@ -15,7 +15,8 @@ from server_utils import (
     CyclicClientManager,
 )
 from thesis_dataset import resplit, transform_dataset_to_dmatrix
-from dataloader import CovertypeDataloader
+from dataloader import CovertypeDataloader, IrisDataloader, HiggsDataloader
+from wine_quality_dataloader import WineQualityDataloader
 
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -36,7 +37,7 @@ print("Min evaluate clients: ", num_evaluate_clients)
 
 # Load centralised test set
 if centralised_eval:
-    dataloader = CovertypeDataloader(partitioner=partitioner.IidPartitioner(
+    dataloader = HiggsDataloader(partitioner=partitioner.IidPartitioner(
                     num_partitions=20
                 ))
     

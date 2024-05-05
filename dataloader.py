@@ -74,6 +74,9 @@ class IrisDataloader(Dataloader):
     def get_params(self):
         pass
 
+    def get_num_classes(self):
+        return 3
+
     def set_partitioner(self, partitioner: Partitioner) -> None:
         self.fds = FederatedDataset(
             dataset="hitorilabs/iris",
@@ -81,7 +84,7 @@ class IrisDataloader(Dataloader):
             resplitter=self.resplitter,
         )
 
-    def _transform_dataset_to_dmatrix(data: Union[Dataset, DatasetDict]) -> xgb.core.DMatrix:
+    def _transform_dataset_to_dmatrix(self, data: Union[Dataset, DatasetDict]) -> xgb.core.DMatrix:
         x_dict = data.with_format("np", ["petal_length", "petal_width", "sepal_length", "sepal_width"])[:]
         x_arrays = list(x_dict.values())
         x = np.stack(x_arrays, axis=1)
@@ -195,15 +198,17 @@ class HiggsDataloader(Dataloader):
     def get_params(self):
         pass
 
+    def get_num_classes(self):
+        return 2
+
     def set_partitioner(self, partitioner: Partitioner) -> None:
         self.fds = FederatedDataset(
-            dataset="mstz/covertype",
-            subset="covertype",
+            dataset="jxie/higgs",
             partitioners={"train": partitioner},
             resplitter=self.resplitter,
         )
 
-    def _transform_dataset_to_dmatrix(data: Union[Dataset, DatasetDict]) -> xgb.core.DMatrix:
+    def _transform_dataset_to_dmatrix(self, data: Union[Dataset, DatasetDict]) -> xgb.core.DMatrix:
         x = data["inputs"]
         y = data["label"]
         new_data = xgb.DMatrix(x, label=y)

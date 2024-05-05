@@ -8,10 +8,11 @@ from flwr.common.logger import log
 from thesis_dataset import (
     instantiate_partitioner,
 )
-from utils import client_args_parser, BST_PARAMS, NUM_LOCAL_ROUND, softprob_obj
+from utils import client_args_parser, BST_PARAMS, NUM_LOCAL_ROUND, softprob_obj, binary_obj
 from client_utils import XgbClient
 from mvs import MVS
-from dataloader import CovertypeDataloader
+from dataloader import CovertypeDataloader, IrisDataloader, HiggsDataloader
+from wine_quality_dataloader import WineQualityDataloader
 
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -31,7 +32,7 @@ partitioner = instantiate_partitioner(
 
 # Load the partition for this `partition_id`
 log(INFO, "Loading partition...")
-dataloader = CovertypeDataloader(partitioner)
+dataloader = HiggsDataloader(partitioner)
 train_dmatrix, num_train, = dataloader.get_train_dmatrix(node_id=args.partition_id)
 valid_dmatrix, num_val = dataloader.get_test_dmatrix(node_id=args.partition_id if args.centralised_eval else None)
 
@@ -55,7 +56,7 @@ fl.client.start_client(
         num_local_round,
         params,
         train_method,
-        MVS(softprob_obj),
+        MVS(binary_obj),
         dataloader,
         args.visualise,
     ),
@@ -64,4 +65,5 @@ fl.client.start_client(
 #Try global sampling but keep local as focus
 #Visualise
 #Proof that federated converge (faster)
-#Add pyproject.toml 
+#Add pyproject.toml
+#Add adaptive from MVS 

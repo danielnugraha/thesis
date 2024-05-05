@@ -1,32 +1,13 @@
 import numpy as np
 import xgboost as xgb
 from thesis_dataset import create_centralized_dataset, ThesisDataset
-from utils import params, softprob_obj
+from utils import params, softprob_obj, rmse_obj
 from subsampling_strategy import SubsamplingStrategy
 from typing import Optional
+from flwr_datasets.partitioner import IidPartitioner
+from wine_quality_dataloader import WineQualityDataloader
+from visualization import plot_tree, plot_labels
 
-def minimal_variance_sampling(lambda_rate = 0.1, sample_rate = 0.1):
-    train_dmatrix, test_dmatrix = create_centralized_dataset(ThesisDataset.IRIS.value)
-    
-    bst = xgb.Booster(params, [train_dmatrix])
-
-    preds = bst.predict(train_dmatrix, output_margin=True, training=True)
-
-    gradients, hessians = softprob_obj(preds, train_dmatrix)
-
-    regularized_gradients = np.sqrt(np.square(gradients[gradients < 0]) + lambda_rate * np.square(hessians[gradients < 0]))
-
-    subsample = np.argsort(regularized_gradients)[-int(len(regularized_gradients) * sample_rate):]
-
-    new_train_dmatrix = train_dmatrix.slice(subsample)
-
-    bst = xgb.train(
-       params,
-       new_train_dmatrix,
-       num_boost_round=1,
-       evals=[(test_dmatrix, "test")],
-    )
-    
 def calculate_threshold(candidates, sum_small, num_large, sample_size):
     threshold = candidates[0]
     middle_begin = [x for x in candidates if x < threshold]
@@ -65,16 +46,21 @@ class MVS(SubsamplingStrategy):
         self.objective = objective
 
     def subsample(self, predictions: np.ndarray, train_dmatrix: xgb.DMatrix) -> xgb.DMatrix:
-        gradients, hessians = self.objective(predictions, train_dmatrix)
-        regularized_gradients = np.sqrt(np.square(gradients) + self.lambda_rate * np.square(hessians))
-
-        regularized_gradients = np.sqrt(np.square(gradients[gradients < 0]) + self.lambda_rate * np.square(hessians[gradients < 0]))
-
-        subsample = np.argsort(regularized_gradients)[-int(len(regularized_gradients) * self.sample_rate):]
+        subsample = self.subsample_indices(predictions, train_dmatrix)
 
         new_train_dmatrix = train_dmatrix.slice(subsample)
 
         return new_train_dmatrix
+    
+    def subsample_indices(self, predictions: np.ndarray, train_dmatrix: xgb.DMatrix) -> np.ndarray:
+        gradients, hessians = self.grad_and_hess(predictions, train_dmatrix)
+        regularized_gradients = np.sqrt(np.square(gradients) + self.lambda_rate * np.square(hessians))
+
+        regularized_gradients = np.sqrt(np.square(gradients) + self.lambda_rate * np.square(hessians))
+
+        subsample = np.argsort(regularized_gradients)[-int(len(regularized_gradients) * self.sample_rate):]
+
+        return subsample
 
     def global_sampling(self, grad_hess_dict: dict[int, list[(float, float)]]) -> dict[int, list[int]]:
         sampling_values = {}
@@ -111,4 +97,38 @@ class MVS(SubsamplingStrategy):
             start_index = end_index
 
         return sampling_values
+    
+    def grad_and_hess(self, predictions: np.ndarray, train_dmatrix: xgb.DMatrix) -> tuple[np.ndarray, np.ndarray]:
+        return self.objective(predictions, train_dmatrix)
+    
+
+def minimal_variance_sampling(lambda_rate = 0.1, sample_rate = 0.1):
+    dataset = WineQualityDataloader(IidPartitioner(3))
+    train_dmatrix, _ = dataset.get_train_dmatrix()
+    print(train_dmatrix.get_label())
+    test_dmatrix, _ = dataset.get_test_dmatrix(None)
+    print(test_dmatrix.get_label())
+    
+    bst = xgb.Booster(params, [train_dmatrix])
+    for i in range(5):
+        preds = bst.predict(train_dmatrix, output_margin=True, training=True)
+
+        gradients, hessians = rmse_obj(preds, train_dmatrix)
+
+        regularized_gradients = np.sqrt(np.square(gradients) + lambda_rate * np.square(hessians))
+
+        subsample = np.argsort(regularized_gradients)[-int(len(regularized_gradients) * sample_rate):]
+
+        new_train_dmatrix = train_dmatrix.slice(subsample)
+
+        bst.update(new_train_dmatrix, i)
+        print(bst.eval_set([(test_dmatrix, "test")]))
+
+        plot_tree(bst)
+        trees_dump = bst.get_dump(dump_format="text")
+        print(trees_dump[-1])
+        
+        plot_labels(3, WineQualityDataloader(IidPartitioner(3)), MVS(rmse_obj), bst, i)
+
+minimal_variance_sampling()
     
