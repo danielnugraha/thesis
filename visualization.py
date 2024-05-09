@@ -150,13 +150,10 @@ def plot__labels(num_clients, dataloader: Dataloader, subsampling_strategy: Subs
 def plot_labels(num_clients, dataloader: Dataloader, subsampling_strategy: SubsamplingStrategy, model: xgb.Booster, round: int):
     markers = ['o', 's', 'x'] 
     colors = ['red', 'green', 'blue']
-    xgb.plot_tree(model, rankdir='LR')
-    plt.savefig("_static/tree_plot.png")
 
     fig, axs = plt.subplots(1, 2, figsize=(12, 6))
 
     important_features = model.get_score(importance_type='gain')
-    print("Important features: ", important_features)
 
     sorted_features = sorted(important_features.items(), key=lambda x: x[1], reverse=True)
 

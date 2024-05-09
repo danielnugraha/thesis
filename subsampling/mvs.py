@@ -7,6 +7,7 @@ from typing import Optional
 from flwr_datasets.partitioner import IidPartitioner
 from wine_quality_dataloader import WineQualityDataloader
 from visualization import plot_tree, plot_labels
+import matplotlib.pyplot as plt
 
 def calculate_threshold(candidates, sum_small, num_large, sample_size):
     threshold = candidates[0]
@@ -105,30 +106,43 @@ class MVS(SubsamplingStrategy):
 def minimal_variance_sampling(lambda_rate = 0.1, sample_rate = 0.1):
     dataset = WineQualityDataloader(IidPartitioner(3))
     train_dmatrix, _ = dataset.get_train_dmatrix()
-    print(train_dmatrix.get_label())
     test_dmatrix, _ = dataset.get_test_dmatrix(None)
-    print(test_dmatrix.get_label())
     
     bst = xgb.Booster(params, [train_dmatrix])
-    for i in range(5):
+    results_list = []
+    for i in range(10):
         preds = bst.predict(train_dmatrix, output_margin=True, training=True)
 
         gradients, hessians = rmse_obj(preds, train_dmatrix)
 
         regularized_gradients = np.sqrt(np.square(gradients) + lambda_rate * np.square(hessians))
 
-        subsample = np.argsort(regularized_gradients)[-int(len(regularized_gradients) * sample_rate):]
+        indices = np.argsort(regularized_gradients)
+        print(regularized_gradients[indices[-1]])
+
+        subsample = indices[-int(len(regularized_gradients) * sample_rate):]
 
         new_train_dmatrix = train_dmatrix.slice(subsample)
 
         bst.update(new_train_dmatrix, i)
-        print(bst.eval_set([(test_dmatrix, "test")]))
-
-        plot_tree(bst)
-        trees_dump = bst.get_dump(dump_format="text")
-        print(trees_dump[-1])
+        evaluate = bst.eval_set([(test_dmatrix, "test")])
+        print(evaluate)
+        results_list.append(float(evaluate.split(':')[1]))
         
         plot_labels(3, WineQualityDataloader(IidPartitioner(3)), MVS(rmse_obj), bst, i)
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(results_list, linewidth=2, label='wine_quality')
 
-minimal_variance_sampling()
+    fontsize = 18
+    plt.legend(fontsize=fontsize, loc='lower right')
+    plt.grid()
+    plt.xticks(fontsize=fontsize)
+    plt.yticks(fontsize=fontsize)
+    plt.xlabel('Rounds', fontsize=fontsize)
+    plt.ylabel('AUC', fontsize=fontsize)
+
+    plt.savefig('wine_quality.png')
+
+# minimal_variance_sampling(lambda_rate=10)
     

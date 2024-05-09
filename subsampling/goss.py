@@ -58,7 +58,7 @@ def run_centralized():
     
     print(bst.eval_set([(test_dmatrix, "test")]))
 
-gradient_based_one_side_sampling()
+# gradient_based_one_side_sampling()
 
 class GOSS(SubsamplingStrategy):
 

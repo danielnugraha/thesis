@@ -62,8 +62,6 @@ class XgbClient(fl.client.Client):
             new_train_dmatrix = self.subsampling_method.subsample(preds, self.train_dmatrix)
             bst_input.update(new_train_dmatrix, bst_input.num_boosted_rounds())
 
-        print(bst_input.get_dump(dump_format="text"))
-
         # Bagging: extract the last N=num_local_round trees for server aggregation
         # Cyclic: return the entire model
         bst = (
@@ -104,8 +102,6 @@ class XgbClient(fl.client.Client):
         # Save model
         local_model = bst.save_raw("json")
         local_model_bytes = bytes(local_model)
-        
-        
 
         return FitRes(
             status=Status(

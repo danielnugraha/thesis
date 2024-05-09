@@ -34,6 +34,7 @@ def evaluate_metrics_aggregation(eval_metrics):
     metrics_aggregated = {"AUC": auc_aggregated}
     return metrics_aggregated
 
+evals = []
 
 def get_evaluate_fn(test_data):
     """Return a function for centralised evaluation."""
@@ -58,6 +59,9 @@ def get_evaluate_fn(test_data):
             )
             auc = round(float(eval_results.split("\t")[1].split(":")[1]), 4)
             log(INFO, f"AUC = {auc} at round {server_round}")
+            log(INFO, f"Adding AUC = {auc} to array")
+            evals.append(auc)
+            log(INFO, f"Eval results: {evals}")
 
             return 0, {"AUC": auc}
 
