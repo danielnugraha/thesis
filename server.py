@@ -14,9 +14,8 @@ from server_utils import (
     get_evaluate_fn,
     CyclicClientManager,
 )
-from thesis_dataset import resplit, transform_dataset_to_dmatrix
-from dataloader import CovertypeDataloader, IrisDataloader, HiggsDataloader
-from wine_quality_dataloader import WineQualityDataloader
+from dataloader.multiclass_dataloader import CovertypeDataloader
+from dataloader.binary_dataloader import HiggsDataloader
 
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -48,7 +47,7 @@ if centralised_eval:
 if train_method == "bagging":
     # Bagging training
     strategy = FedXgbBagging(
-        evaluate_function=get_evaluate_fn(test_dmatrix) if centralised_eval else None,
+        evaluate_function=get_evaluate_fn(test_dmatrix, dataloader.get_params()) if centralised_eval else None,
         fraction_fit=(float(num_clients_per_round) / pool_size),
         min_fit_clients=num_clients_per_round,
         min_available_clients=pool_size,

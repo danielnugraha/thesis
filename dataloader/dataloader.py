@@ -4,7 +4,7 @@ from flwr_datasets.resplitter import Resplitter
 from typing import Optional, Union, Dict, Tuple
 import xgboost as xgb
 import numpy as np
-from utils import softprob_obj, binary_obj, rmse_obj
+from objective import softprob_obj, binary_obj, rmse_obj
 from datasets import Dataset, DatasetDict, load_dataset
 from abc import ABC, abstractmethod
 

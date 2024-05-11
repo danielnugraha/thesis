@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 import xgboost as xgb
 import numpy as np
 from scipy.spatial import ConvexHull
-from dataloader import Dataloader
-from subsampling_strategy import SubsamplingStrategy
+from dataloader.dataloader import Dataloader
+from subsampling.subsampling_strategy import SubsamplingStrategy
 
 def plot_labels_(num_clients, dataloader: Dataloader, subsampling_strategy: SubsamplingStrategy, model: xgb.Booster, round: int):
     sampling_values = [0.2, 0.1, 0.05]

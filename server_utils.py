@@ -6,7 +6,6 @@ from flwr.common import Parameters, Scalar
 from flwr.server.client_manager import SimpleClientManager
 from flwr.server.client_proxy import ClientProxy
 from flwr.server.criterion import Criterion
-from utils import BST_PARAMS
 
 
 def eval_config(rnd: int) -> Dict[str, str]:
@@ -36,7 +35,7 @@ def evaluate_metrics_aggregation(eval_metrics):
 
 evals = []
 
-def get_evaluate_fn(test_data):
+def get_evaluate_fn(test_data, params):
     """Return a function for centralised evaluation."""
 
     def evaluate_fn(
@@ -46,7 +45,7 @@ def get_evaluate_fn(test_data):
         if server_round == 0:
             return 0, {}
         else:
-            bst = xgb.Booster(params=BST_PARAMS)
+            bst = xgb.Booster(params=params)
             for para in parameters.tensors:
                 para_b = bytearray(para)
 

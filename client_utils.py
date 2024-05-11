@@ -1,6 +1,6 @@
 from logging import INFO
 import xgboost as xgb
-from subsampling_strategy import SubsamplingStrategy
+from subsampling.subsampling_strategy import SubsamplingStrategy
 import flwr as fl
 from flwr.common.logger import log
 from flwr.common import (
@@ -14,9 +14,7 @@ from flwr.common import (
     Parameters,
     Status,
 )
-from visualization import plot_labels, plot_tree
-import matplotlib.pyplot as plt
-from dataloader import Dataloader
+from dataloader.dataloader import Dataloader
 
 
 class XgbClient(fl.client.Client):
@@ -30,7 +28,6 @@ class XgbClient(fl.client.Client):
         params,
         train_method,
         subsampling_method: SubsamplingStrategy,
-        dataloader: Dataloader,
         visualise: bool,
     ):
         self.train_dmatrix = train_dmatrix
@@ -41,7 +38,6 @@ class XgbClient(fl.client.Client):
         self.params = params
         self.train_method = train_method
         self.subsampling_method = subsampling_method
-        self.dataloader = dataloader
         self.visualise = visualise
 
     def get_parameters(self, ins: GetParametersIns) -> GetParametersRes:
@@ -74,11 +70,6 @@ class XgbClient(fl.client.Client):
         )
 
         return bst
-    
-    def query_grad_and_hess(self, objective):
-        bst = xgb.Booster(self.params, [self.train_dmatrix])
-        preds = bst.predict(self.train_dmatrix, output_margin=True, training=True)
-        return objective(preds, self.train_dmatrix)
 
     def fit(self, ins: FitIns) -> FitRes:
         global_round = int(ins.config["global_round"])
@@ -94,7 +85,6 @@ class XgbClient(fl.client.Client):
 
             # Load global model into booster
             bst.load_model(global_model)
-            bst.save_model(f"_static/model_{bst.num_boosted_rounds()}.json")
 
             # Local training
             bst = self._local_boost(bst)

@@ -48,7 +48,16 @@ class HiggsDataloader(Dataloader):
         return binary_obj
 
     def get_params(self):
-        pass
+        return {
+            "objective": "binary:logistic",
+            "eta": 0.1,  # Learning rate
+            "max_depth": 8,
+            "eval_metric": "auc",
+            "nthread": 16,
+            "num_parallel_tree": 1,
+            "subsample": 1,
+            "tree_method": "hist",
+        }
 
     def get_num_classes(self):
         return 2
@@ -65,3 +74,4 @@ class HiggsDataloader(Dataloader):
         y = data["label"]
         new_data = xgb.DMatrix(x, label=y)
         return new_data
+    

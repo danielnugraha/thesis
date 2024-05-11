@@ -48,7 +48,17 @@ class IrisDataloader(Dataloader):
         return softprob_obj
     
     def get_params(self):
-        pass
+        return {
+            "objective": "multi:softmax",
+            "eta": 0.1,  # Learning rate
+            "max_depth": 8,
+            "eval_metric": "auc",
+            "nthread": 16,
+            "num_parallel_tree": 1,
+            "subsample": 1,
+            "tree_method": "hist",
+            "num_class": 3,
+        }
 
     def get_num_classes(self):
         return 3
@@ -110,10 +120,20 @@ class CovertypeDataloader(Dataloader):
         return softprob_obj
     
     def get_params(self):
-        pass
+        return {
+            "objective": "multi:softmax",
+            "eta": 0.1,  # Learning rate
+            "max_depth": 8,
+            "eval_metric": "auc",
+            "nthread": 16,
+            "num_parallel_tree": 1,
+            "subsample": 1,
+            "tree_method": "hist",
+            "num_class": 7,
+        }
 
     def get_num_classes(self):
-        return 3
+        return 7
 
     def set_partitioner(self, partitioner: Partitioner) -> None:
         self.fds = FederatedDataset(

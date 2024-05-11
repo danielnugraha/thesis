@@ -1,11 +1,10 @@
 import numpy as np
 import xgboost as xgb
 from thesis_dataset import create_centralized_dataset, ThesisDataset
-from utils import params, softprob_obj, rmse_obj
-from subsampling_strategy import SubsamplingStrategy
+from objective import softprob_obj, rmse_obj
+from subsampling.subsampling_strategy import SubsamplingStrategy
 from typing import Optional
 from flwr_datasets.partitioner import IidPartitioner
-from wine_quality_dataloader import WineQualityDataloader
 from visualization import plot_tree, plot_labels
 import matplotlib.pyplot as plt
 
@@ -55,9 +54,13 @@ class MVS(SubsamplingStrategy):
     
     def subsample_indices(self, predictions: np.ndarray, train_dmatrix: xgb.DMatrix) -> np.ndarray:
         gradients, hessians = self.grad_and_hess(predictions, train_dmatrix)
-        regularized_gradients = np.sqrt(np.square(gradients) + self.lambda_rate * np.square(hessians))
 
-        regularized_gradients = np.sqrt(np.square(gradients) + self.lambda_rate * np.square(hessians))
+        if len(gradients < 0) > 0:
+            # multiclass
+            regularized_gradients = np.sqrt(np.square(gradients[gradients < 0]) + self.lambda_rate * np.square(hessians[gradients < 0]))
+        else:
+            # regression
+            regularized_gradients = np.sqrt(np.square(gradients) + self.lambda_rate * np.square(hessians))
 
         subsample = np.argsort(regularized_gradients)[-int(len(regularized_gradients) * self.sample_rate):]
 

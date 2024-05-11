@@ -8,11 +8,11 @@ from flwr.common.logger import log
 from thesis_dataset import (
     instantiate_partitioner,
 )
-from utils import client_args_parser, BST_PARAMS, NUM_LOCAL_ROUND, softprob_obj, binary_obj
+from utils import client_args_parser, NUM_LOCAL_ROUND
 from client_utils import XgbClient
-from mvs import MVS
-from dataloader import CovertypeDataloader, IrisDataloader, HiggsDataloader
-from wine_quality_dataloader import WineQualityDataloader
+from subsampling.mvs import MVS
+from dataloader.multiclass_dataloader import CovertypeDataloader
+from dataloader.binary_dataloader import HiggsDataloader
 
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -38,7 +38,7 @@ valid_dmatrix, num_val = dataloader.get_test_dmatrix(node_id=args.partition_id i
 
 # Hyper-parameters for xgboost training
 num_local_round = NUM_LOCAL_ROUND
-params = BST_PARAMS
+params = dataloader.get_params()
 
 # Setup learning rate
 if args.train_method == "bagging" and args.scaled_lr:
@@ -56,8 +56,7 @@ fl.client.start_client(
         num_local_round,
         params,
         train_method,
-        MVS(binary_obj),
-        dataloader,
+        MVS(dataloader.get_objective(), sample_rate=0.8),
         args.visualise,
     ),
 )
