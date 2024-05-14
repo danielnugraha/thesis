@@ -3,15 +3,12 @@ set -e
 cd "$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"/
 
 echo "Starting server"
-python3 server.py --pool-size=5 --num-rounds=30 --num-clients-per-round=5 --centralised-eval &
-sleep 30  # Sleep for 30s to give the server enough time to start
+python3 server.py --pool-size=10 --num-rounds=30 --num-clients-per-round=10 --centralised-eval &
+sleep 10  # Sleep for 30s to give the server enough time to start
 
-echo "Starting client 0"
-python3 client.py --partition-id=0 --num-partitions=5 --partitioner-type=exponential --visualise &
-
-for i in `seq 1 4`; do
+for i in `seq 0 9`; do
     echo "Starting client $i"
-    python3 client.py --partition-id=$i --num-partitions=5 --partitioner-type=exponential &
+    python3 client.py --partition-id=$i --num-partitions=10 --partitioner-type=exponential &
 done
 
 # Enable CTRL+C to stop all background processes

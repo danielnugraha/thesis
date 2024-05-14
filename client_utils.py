@@ -53,7 +53,6 @@ class XgbClient(fl.client.Client):
     def _local_boost(self, bst_input: xgb.Booster):
         # Update trees based on local training data.
         for i in range(self.num_local_round):
-            print(self.train_dmatrix.feature_names)
             preds = bst_input.predict(self.train_dmatrix, output_margin=True, training=True)
             new_train_dmatrix = self.subsampling_method.subsample(preds, self.train_dmatrix)
             bst_input.update(new_train_dmatrix, bst_input.num_boosted_rounds())
@@ -77,7 +76,6 @@ class XgbClient(fl.client.Client):
             # First round local training
             bst = xgb.Booster(self.params, [self.train_dmatrix])
             bst = self._local_boost(bst)
-            print("first round")
         else:
             bst = xgb.Booster(params=self.params)
             for item in ins.parameters.tensors:

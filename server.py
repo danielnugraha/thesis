@@ -16,6 +16,7 @@ from server_utils import (
 )
 from dataloader.multiclass_dataloader import CovertypeDataloader
 from dataloader.binary_dataloader import HiggsDataloader
+from dataloader.regression_dataloader import WineQualityDataloader
 
 
 warnings.filterwarnings("ignore", category=UserWarning)

@@ -44,6 +44,7 @@ class MVS(SubsamplingStrategy):
         self.lambda_rate = lambda_rate
         self.sample_rate = sample_rate
         self.objective = objective
+        self.threshold = []
 
     def subsample(self, predictions: np.ndarray, train_dmatrix: xgb.DMatrix) -> xgb.DMatrix:
         subsample = self.subsample_indices(predictions, train_dmatrix)
@@ -58,11 +59,15 @@ class MVS(SubsamplingStrategy):
         if len(gradients < 0) > 0:
             # multiclass
             regularized_gradients = np.sqrt(np.square(gradients[gradients < 0]) + self.lambda_rate * np.square(hessians[gradients < 0]))
+            #print ("gradients/hessians, size, max, min: ", np.average(gradients[gradients < 0]/hessians[gradients < 0]), ", ", len(gradients), ", ", np.max(gradients[gradients < 0]), ", ", np.min(gradients[gradients < 0]), ", ", np.max(gradients[gradients < 0]) - np.min(gradients[gradients < 0]))
         else:
             # regression
             regularized_gradients = np.sqrt(np.square(gradients) + self.lambda_rate * np.square(hessians))
+            #print ("gradients/hessians: ", np.average(gradients/hessians), ", ", len(gradients), ", ", np.max(gradients), ", ", np.min(gradients), ", ", np.max(gradients) - np.min(gradients))
 
         subsample = np.argsort(regularized_gradients)[-int(len(regularized_gradients) * self.sample_rate):]
+        self.threshold.append(regularized_gradients[subsample[-1]])
+        print("threshold subsample: ", self.threshold)
 
         return subsample
 

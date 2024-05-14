@@ -13,6 +13,7 @@ from client_utils import XgbClient
 from subsampling.mvs import MVS
 from dataloader.multiclass_dataloader import CovertypeDataloader
 from dataloader.binary_dataloader import HiggsDataloader
+from dataloader.regression_dataloader import WineQualityDataloader
 
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -56,7 +57,7 @@ fl.client.start_client(
         num_local_round,
         params,
         train_method,
-        MVS(dataloader.get_objective(), sample_rate=0.8),
+        MVS(dataloader.get_objective(), sample_rate=0.1),
         args.visualise,
     ),
 )
