@@ -56,7 +56,6 @@ def binary_obj(predt: np.ndarray, data: xgb.DMatrix):
         weights = np.ones_like(labels)
     else:
         weights = data.get_weight()
-
     grad = predt - labels
     hess = np.maximum(predt * (1.0 - predt), eps)
 

@@ -57,7 +57,7 @@ fl.client.start_client(
         num_local_round,
         params,
         train_method,
-        MVS(dataloader.get_objective(), sample_rate=0.1),
+        MVS(dataloader.get_objective(), sample_rate=0.2),
         args.visualise,
     ),
 )

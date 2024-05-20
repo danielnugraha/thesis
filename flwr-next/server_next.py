@@ -1,5 +1,6 @@
 from typing import List, Tuple, Dict
 import random
+import numpy as np
 import time
 import json
 
@@ -15,7 +16,7 @@ from flwr.common import (
     RecordSet,
     DEFAULT_TTL,
 )
-from typing import Optional
+from typing import Optional, cast, List
 from flwr.server import Driver
 from subsampling.mvs import MVS
 from objective import binary_obj
@@ -37,9 +38,10 @@ def main(driver: Driver, context: Context) -> None:
         node_ids = driver.get_node_ids()
 
         recordset = RecordSet(
-            configs_records={"grad_and_hess": ConfigsRecord({"grad": 1, "hess": 1})},
+            # configs_records={"grad_and_hess": ConfigsRecord({"grad": 1, "hess": 1})},
+            configs_records={"adaptive_threshold": ConfigsRecord({"threshold": 1, "sample_rate": 1})}
         )
-
+        
         for node_id in node_ids:
             message = driver.create_message(
                 content=recordset,
@@ -68,22 +70,34 @@ def main(driver: Driver, context: Context) -> None:
         print(f"Received {len(all_replies)} results")
 
         all_replies_dict = {msg.metadata.src_node_id: msg for msg in all_replies}
-        grad_hess_dict = {}
+        #grad_hess_dict = {}
+
+        #for id, msg in all_replies_dict.items():
+         #   values = msg.content.configs_records["grad_and_hess"]
+          #  grad: List[float] = values["grad"]
+           # hess: List[float] = values["hess"]
+            #grad_hess_dict[id] = (grad, hess)
+        
+        #configs_dict = subsampling.global_sampling(grad_hess_dict)
+
+        thresholds = []
+        sample_rate = 0.0
 
         for id, msg in all_replies_dict.items():
-            values = msg.content.configs_records["grad_and_hess"]
-            grad: List[float] = values["grad"]
-            hess: List[float] = values["hess"]
-            grad_hess_dict[id] = (grad, hess)
+            values = msg.content.configs_records["adaptive_threshold"]
+            threshold = values["threshold"]
+            thresholds.append(threshold)
+            sample_rate = values["sample_rate"]
         
-        configs_dict = subsampling.global_sampling(grad_hess_dict)
+        threshold = (np.max(thresholds) - np.min(thresholds)) * (1.0 - sample_rate) + np.min(thresholds)
+        adaptive_threshold = ConfigsRecord({"threshold": threshold})
 
         # Create messages
         recordset = RecordSet()
         messages = []
         for node_id in node_ids:
             recordset = RecordSet(
-                configs_records={"data_points": ConfigsRecord({"indices": configs_dict[node_id]})},
+                configs_records={"adaptive_threshold": ConfigsRecord({"threshold": adaptive_threshold})},
             )
             message = driver.create_message(
                 content=recordset,
@@ -110,6 +124,99 @@ def main(driver: Driver, context: Context) -> None:
             time.sleep(3)
 
         print(f"Received {len(all_replies)} results")
+
+
+def train_workflow(node_ids: List[int], current_round: int, driver: Driver, context: Context, global_model: Optional[bytes] = None) -> Optional[bytes]:
+    recordset = RecordSet(
+        parameters_records=context.state.parameters_records,
+    )
+
+    out_messages = [
+        driver.create_message(
+            content=recordset,
+            message_type=MessageType.TRAIN,
+            dst_node_id=node_id,
+            group_id=str(current_round),
+        )
+        for node_id in node_ids
+    ]
+
+    in_messages = list(driver.send_and_receive(out_messages))
+    num_failures = len([msg for msg in in_messages if msg.has_error()])
+
+    if num_failures > 0:
+        return None
+
+    for message in in_messages:
+        parameters = message.content.parameters_records['parameters']
+        for parameter in parameters.values():
+            global_model = aggregate(global_model, parameter.data)
+
+    return global_model
+
+
+def adaptive_train_workflow(node_ids: List[int], current_round: int, driver: Driver, context: Context, global_model: Optional[bytes] = None) -> Optional[bytes]:
+    recordset = RecordSet(
+        # configs_records={"grad_and_hess": ConfigsRecord({"grad": 1, "hess": 1})},
+        configs_records={"config": ConfigsRecord({"threshold": 1, "sample_rate": 1})},
+        parameters_records=context.state.parameters_records,
+    )
+
+    out_messages = [
+        driver.create_message(
+            content=recordset,
+            message_type=MessageType.QUERY,
+            dst_node_id=node_id,
+            group_id=str(current_round),
+            ttl=DEFAULT_TTL,
+        )
+        for node_id in node_ids
+    ]
+
+    in_messages = list(driver.send_and_receive(out_messages))
+    num_failures = len([msg for msg in in_messages if msg.has_error()])
+
+    if num_failures > 0:
+        return None
+    
+    thresholds = []
+    sample_rate = 0.0
+
+    for message in in_messages:
+        config = message.content.configs_records['config']
+        threshold = config['threshold']
+        thresholds.append(threshold)
+        sample_rate = config['sample_rate']
+
+    threshold = (np.max(thresholds) - np.min(thresholds)) * (1.0 - sample_rate) + np.min(thresholds)
+    adaptive_threshold = ConfigsRecord({"threshold": threshold})
+
+    recordset = RecordSet(
+        configs_records={"config": ConfigsRecord({"threshold": adaptive_threshold})},
+    )
+
+    out_messages = [
+        driver.create_message(
+            content=recordset,
+            message_type=MessageType.TRAIN,
+            dst_node_id=node_id,
+            group_id=str(current_round),
+        )
+        for node_id in node_ids
+    ]
+
+    in_messages = list(driver.send_and_receive(out_messages))
+    num_failures = len([msg for msg in in_messages if msg.has_error()])
+
+    if num_failures > 0:
+        return None
+
+    for message in in_messages:
+        parameters = message.content.parameters_records['parameters']
+        for parameter in parameters.values():
+            global_model = aggregate(global_model, parameter.data)
+
+    return global_model
 
 def aggregate(
     bst_prev_org: Optional[bytes],

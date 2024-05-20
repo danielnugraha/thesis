@@ -3,7 +3,7 @@ import xgboost as xgb
 from thesis_dataset import create_centralized_dataset, ThesisDataset
 from objective import softprob_obj, rmse_obj
 from subsampling.subsampling_strategy import SubsamplingStrategy
-from typing import Optional
+from typing import Optional, Tuple
 from flwr_datasets.partitioner import IidPartitioner
 from visualization import plot_tree, plot_labels
 import matplotlib.pyplot as plt
@@ -44,32 +44,54 @@ class MVS(SubsamplingStrategy):
         self.lambda_rate = lambda_rate
         self.sample_rate = sample_rate
         self.objective = objective
+        self.regularized_gradients_cache: Optional[np.ndarray] = None
+        self.subsample_indices_cache: Optional[np.ndarray] = None
         self.threshold = []
+        self.max = []
 
-    def subsample(self, predictions: np.ndarray, train_dmatrix: xgb.DMatrix) -> xgb.DMatrix:
-        subsample = self.subsample_indices(predictions, train_dmatrix)
+    def threshold_subsample(self, train_dmatrix: xgb.DMatrix, threshold: int) -> xgb.DMatrix:
+        if self.regularized_gradients_cache is None:
+            raise ValueError("No regularized gradients in memory.")
+        
+        indices = np.where(self.regularized_gradients_cache >= threshold)[0]
+        new_train_dmatrix = train_dmatrix.slice(indices)
+        return new_train_dmatrix
 
-        new_train_dmatrix = train_dmatrix.slice(subsample)
+    def subsample(self, predictions: np.ndarray, train_dmatrix: xgb.DMatrix, indices: Optional[np.ndarray] = None) -> xgb.DMatrix:
+        if indices is None:
+            indices = self.subsample_indices(predictions, train_dmatrix)
+        
+        new_train_dmatrix = train_dmatrix.slice(indices)
+
+        self.subsample_indices_cache = None
 
         return new_train_dmatrix
     
-    def subsample_indices(self, predictions: np.ndarray, train_dmatrix: xgb.DMatrix) -> np.ndarray:
+    def subsample_indices(self, predictions: np.ndarray, train_dmatrix: xgb.DMatrix, grad_hess: Optional[Tuple[np.ndarray, np.ndarray]] = None) -> np.ndarray:
         gradients, hessians = self.grad_and_hess(predictions, train_dmatrix)
 
-        if len(gradients < 0) > 0:
+        if gradients.ndim > 1:
             # multiclass
             regularized_gradients = np.sqrt(np.square(gradients[gradients < 0]) + self.lambda_rate * np.square(hessians[gradients < 0]))
             #print ("gradients/hessians, size, max, min: ", np.average(gradients[gradients < 0]/hessians[gradients < 0]), ", ", len(gradients), ", ", np.max(gradients[gradients < 0]), ", ", np.min(gradients[gradients < 0]), ", ", np.max(gradients[gradients < 0]) - np.min(gradients[gradients < 0]))
         else:
-            # regression
+            # regression & binary
             regularized_gradients = np.sqrt(np.square(gradients) + self.lambda_rate * np.square(hessians))
             #print ("gradients/hessians: ", np.average(gradients/hessians), ", ", len(gradients), ", ", np.max(gradients), ", ", np.min(gradients), ", ", np.max(gradients) - np.min(gradients))
 
         subsample = np.argsort(regularized_gradients)[-int(len(regularized_gradients) * self.sample_rate):]
-        self.threshold.append(regularized_gradients[subsample[-1]])
-        print("threshold subsample: ", self.threshold)
-
+        self.threshold.append(regularized_gradients[subsample[0]])
+        self.max.append(np.max(regularized_gradients))
+        print("regularized grads: ", regularized_gradients)
+        print("subsample size: ", len(subsample))
+        print("max: ", self.max)
+        print("threshold:", self.threshold)
+        self.subsample_indices_cache = subsample
+        
         return subsample
+    
+    def get_threshold(self) -> int:
+        return self.threshold
 
     def global_sampling(self, grad_hess_dict: dict[int, list[(float, float)]]) -> dict[int, list[int]]:
         sampling_values = {}
@@ -126,7 +148,7 @@ def minimal_variance_sampling(lambda_rate = 0.1, sample_rate = 0.1):
         regularized_gradients = np.sqrt(np.square(gradients) + lambda_rate * np.square(hessians))
 
         indices = np.argsort(regularized_gradients)
-        print(regularized_gradients[indices[-1]])
+        print(regularized_gradients[indices[0]])
 
         subsample = indices[-int(len(regularized_gradients) * sample_rate):]
 
@@ -153,4 +175,4 @@ def minimal_variance_sampling(lambda_rate = 0.1, sample_rate = 0.1):
     plt.savefig('wine_quality.png')
 
 # minimal_variance_sampling(lambda_rate=10)
-    
+# add decentralized evaluation

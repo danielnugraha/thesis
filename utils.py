@@ -108,6 +108,13 @@ def client_args_parser():
         help="Partition ID used for the current client.",
     )
     parser.add_argument(
+        "--sampling-rate",
+        default=0.1,
+        type=int,
+        help="Sampling rate .",
+    )
+
+    parser.add_argument(
         "--seed", default=42, type=int, help="Seed used for train/test splitting."
     )
     parser.add_argument(

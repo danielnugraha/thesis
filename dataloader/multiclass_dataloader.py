@@ -121,7 +121,7 @@ class CovertypeDataloader(Dataloader):
     
     def get_params(self):
         return {
-            "objective": "multi:softmax",
+            "objective": "multi:softprob",
             "eta": 0.1,  # Learning rate
             "max_depth": 8,
             "eval_metric": "auc",
