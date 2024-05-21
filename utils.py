@@ -1,83 +1,30 @@
-import numpy as np
-import xgboost as xgb
 import argparse
-from thesis_dataset import ThesisDataset
-from datasets import Dataset, DatasetDict
-from typing import Union
-import math
+from flwr_datasets.partitioner import (
+    IidPartitioner,
+    LinearPartitioner,
+    SquarePartitioner,
+    ExponentialPartitioner,
+)
 
-params = {
-    "objective": "reg:squarederror",
-    "eta": 0.05,  # Learning rate
-    "max_depth": 8,
-    "eval_metric": "rmse",
-    "nthread": 16,
-    "num_parallel_tree": 1,
-    "subsample": 1,
-    "tree_method": "hist",
+CORRELATION_TO_PARTITIONER = {
+    "uniform": IidPartitioner,
+    "linear": LinearPartitioner,
+    "square": SquarePartitioner,
+    "exponential": ExponentialPartitioner,
 }
 
-multi_params = {
-    "objective": "multi:softmax",
-    "eta": 0.1,  # Learning rate
-    "max_depth": 8,
-    "eval_metric": "auc",
-    "nthread": 16,
-    "num_parallel_tree": 1,
-    "subsample": 1,
-    "tree_method": "hist",
-    "num_class": 7,
-}
 
-dataset_params = {
-    ThesisDataset.IRIS: {"objective": "multi:softmax"},
-    ThesisDataset.HIGGS: {"objective": "binary:logistic"},
-}
-
-def iris_preprocess(data: Union[Dataset, DatasetDict]):
-    x_dict = data.with_format("np", ["petal_length", "petal_width", "sepal_length", "sepal_width"])[:]
-    x_arrays = list(x_dict.values())
-    x = np.stack(x_arrays, axis=1)
-    y = data["species"]
-    return x, y
-
-def higgs_preprocess(data: Union[Dataset, DatasetDict]):
-    x = data["inputs"]
-    y = data["label"]
-    return x, y
-
-dataset_preprocess = {
-    ThesisDataset.IRIS: iris_preprocess,
-    ThesisDataset.HIGGS: higgs_preprocess
-}
-
-def get_params(dataset):
-    params = {
-        "eta": 0.1,  # Learning rate
-        "max_depth": 8,
-        "eval_metric": "auc",
-        "nthread": 16,
-        "num_parallel_tree": 1,
-        "subsample": 1,
-        "tree_method": "hist",
-        'num_class': 3,
-    }
-    params.update(dataset_params.get(dataset, {}))
-    return params
+def instantiate_partitioner(partitioner_type: str, num_partitions: int):
+    """Initialise partitioner based on selected partitioner type and number of
+    partitions."""
+    partitioner = CORRELATION_TO_PARTITIONER[partitioner_type](
+        num_partitions=num_partitions
+    )
+    return partitioner
 
 
 # Hyper-parameters for xgboost training
 NUM_LOCAL_ROUND = 1
-BST_PARAMS = {
-    "objective": "binary:logistic",
-    "eta": 0.1,  # Learning rate
-    "max_depth": 8,
-    "eval_metric": "auc",
-    "nthread": 16,
-    "num_parallel_tree": 1,
-    "subsample": 1,
-    "tree_method": "hist",
-}
 
 
 def client_args_parser():

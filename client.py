@@ -5,7 +5,7 @@ import flwr as fl
 from flwr_datasets import FederatedDataset
 from flwr.common.logger import log
 
-from thesis_dataset import (
+from utils import (
     instantiate_partitioner,
 )
 from utils import client_args_parser, NUM_LOCAL_ROUND

@@ -1,6 +1,5 @@
 import numpy as np
 import xgboost as xgb
-from thesis_dataset import create_centralized_dataset, ThesisDataset
 from objective import softprob_obj, rmse_obj
 from subsampling.subsampling_strategy import SubsamplingStrategy
 from typing import Optional, Tuple
