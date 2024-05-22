@@ -6,15 +6,15 @@ from flwr_datasets.partitioner import (
     ExponentialPartitioner,
 )
 from dataloader.binary_dataloader import HiggsDataloader
-from dataloader.regression_dataloader import WineQualityDataloader
+from dataloader.regression_dataloader import WineQualityDataloader, HouseSalesDataloader
 from dataloader.multiclass_dataloader import CovertypeDataloader
 
-NUM_ROUNDS = 5
+NUM_ROUNDS = 10
 NUM_LOCAL_ROUND = 1
 NUM_TRAIN_CLIENTS = 10
 NUM_EVALUATE_CLIENTS = 10
 CENTRALIZED_EVAL = True
-PARTITIONER = ExponentialPartitioner(num_partitions=NUM_TRAIN_CLIENTS)
-DATASET = HiggsDataloader(PARTITIONER)
-SAMPLE_RATE = 0.1
+PARTITIONER = IidPartitioner(num_partitions=NUM_TRAIN_CLIENTS)
+DATASET = HouseSalesDataloader(PARTITIONER)
+SAMPLE_RATE = 1.0
 SUBSAMPLING = MVS(DATASET.get_objective(), sample_rate=SAMPLE_RATE)

@@ -1,5 +1,6 @@
-from dataloader.multiclass_dataloader import CovertypeDataloader
-from dataloader.binary_dataloader import HiggsDataloader
+from dataloader.multiclass_dataloader import CovertypeDataloader, LetterRecognitionDataloader
+from dataloader.binary_dataloader import HiggsDataloader, RoadSafetyDataloader, MiniBooNEDataloader, EyeMovementsDataloader, JannisDataloader, CaliforniaDataloader
+from dataloader.regression_dataloader import SuperconductDataloader, CpuActDataloader, DelaysZurichTransportDataloader, AllstateClaimsSeverityDataloader, HouseSalesDataloader, DiamondsDataloader
 from flwr_datasets.partitioner import ExponentialPartitioner
 from subsampling.mvs import MVS
 import xgboost as xgb
@@ -29,14 +30,14 @@ def mvs_simulation():
 
 def mvs_simulation_centralized():
     num_clients = 5
-    dataset = HiggsDataloader(ExponentialPartitioner(num_clients))
-    mvs = MVS(dataset.get_objective(), sample_rate=0.7)
+    dataset = HouseSalesDataloader(ExponentialPartitioner(num_clients))
+    mvs = MVS(dataset.get_objective(), sample_rate=0.1)
     train_dmatrix, _ = dataset.get_train_dmatrix()
     test_dmatrix, _ = dataset.get_test_dmatrix(None)
     bst = xgb.Booster(dataset.get_params(), [train_dmatrix])
     eval_results = []
 
-    for i in range(50):
+    for i in range(10):
         preds = bst.predict(train_dmatrix, output_margin=True, training=True)
         new_train_dmatrix = mvs.subsample(preds, train_dmatrix)
         bst.update(new_train_dmatrix, bst.num_boosted_rounds())
@@ -47,6 +48,12 @@ def mvs_simulation_centralized():
         print("Validation: ", evaluate)
 
     print(eval_results)
+
+def load_dataset_try():
+    num_clients = 5
+    dataset = DiamondsDataloader(ExponentialPartitioner(num_clients))
+    train_dmatrix, _ = dataset.get_train_dmatrix()
+    test_dmatrix, _ = dataset.get_test_dmatrix(None)
 
 def visualise():
     data = {
@@ -72,5 +79,7 @@ def visualise():
     plt.tight_layout()
     plt.savefig('_static/xgboost_centralized_higg_max_depth_10.png')
 
-mvs_simulation_centralized()
+# load_dataset_try()
 # visualise()
+
+mvs_simulation_centralized()

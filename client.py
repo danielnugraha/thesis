@@ -13,7 +13,7 @@ from client_utils import XgbClient
 from subsampling.mvs import MVS
 from dataloader.multiclass_dataloader import CovertypeDataloader
 from dataloader.binary_dataloader import HiggsDataloader
-from dataloader.regression_dataloader import WineQualityDataloader
+from dataloader.regression_dataloader import WineQualityDataloader, HouseSalesDataloader, AllstateClaimsSeverityDataloader
 
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -33,7 +33,7 @@ partitioner = instantiate_partitioner(
 
 # Load the partition for this `partition_id`
 log(INFO, "Loading partition...")
-dataloader = HiggsDataloader(partitioner)
+dataloader = AllstateClaimsSeverityDataloader(partitioner)
 train_dmatrix, num_train, = dataloader.get_train_dmatrix(node_id=args.partition_id)
 valid_dmatrix, num_val = dataloader.get_test_dmatrix(node_id=args.partition_id if args.centralised_eval else None)
 
@@ -57,7 +57,7 @@ fl.client.start_client(
         num_local_round,
         params,
         train_method,
-        MVS(dataloader.get_objective(), sample_rate=0.2),
+        MVS(dataloader.get_objective(), sample_rate=0.9),
         args.visualise,
     ),
 )

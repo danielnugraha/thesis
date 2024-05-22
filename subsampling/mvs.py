@@ -81,16 +81,16 @@ class MVS(SubsamplingStrategy):
         subsample = np.argsort(regularized_gradients)[-int(len(regularized_gradients) * self.sample_rate):]
         self.threshold.append(regularized_gradients[subsample[0]])
         self.max.append(np.max(regularized_gradients))
-        print("regularized grads: ", regularized_gradients)
         print("subsample size: ", len(subsample))
         print("max: ", self.max)
         print("threshold:", self.threshold)
         self.subsample_indices_cache = subsample
+        self.regularized_gradients_cache = regularized_gradients
         
         return subsample
     
-    def get_threshold(self) -> int:
-        return self.threshold
+    def get_threshold(self) -> float:
+        return self.threshold[-1]
 
     def global_sampling(self, grad_hess_dict: dict[int, list[(float, float)]]) -> dict[int, list[int]]:
         sampling_values = {}

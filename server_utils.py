@@ -23,6 +23,7 @@ def fit_config(rnd: int) -> Dict[str, str]:
     }
     return config
 
+evals = []
 
 def evaluate_metrics_aggregation(eval_metrics):
     """Return an aggregated metric (AUC) for evaluation."""
@@ -30,10 +31,12 @@ def evaluate_metrics_aggregation(eval_metrics):
     auc_aggregated = (
         sum([metrics["AUC"] * num for num, metrics in eval_metrics]) / total_num
     )
+    evals.append(auc_aggregated)
+    print("Aggregate evals: ", evals)
     metrics_aggregated = {"AUC": auc_aggregated}
     return metrics_aggregated
 
-evals = []
+
 
 def get_evaluate_fn(test_data, params):
     """Return a function for centralised evaluation."""

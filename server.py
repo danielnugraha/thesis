@@ -16,7 +16,7 @@ from server_utils import (
 )
 from dataloader.multiclass_dataloader import CovertypeDataloader
 from dataloader.binary_dataloader import HiggsDataloader
-from dataloader.regression_dataloader import WineQualityDataloader
+from dataloader.regression_dataloader import WineQualityDataloader, HouseSalesDataloader, AllstateClaimsSeverityDataloader
 
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -37,7 +37,7 @@ print("Min evaluate clients: ", num_evaluate_clients)
 
 # Load centralised test set
 if centralised_eval:
-    dataloader = HiggsDataloader(partitioner=partitioner.IidPartitioner(
+    dataloader = AllstateClaimsSeverityDataloader(partitioner=partitioner.IidPartitioner(
                     num_partitions=20
                 ))
     

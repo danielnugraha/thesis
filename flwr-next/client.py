@@ -40,23 +40,25 @@ def evaluate(msg: Message, ctx: Context):
     record = msg.content.parameters_records["parameters"]
     for key in list(record.keys()):
         parameters.append(record[key].data)
-    result = client.evaluate(parameters)
+    result, num = client.evaluate(parameters)
     reply = RecordSet(
-        metrics_records={"metrics": MetricsRecord({"eval_result": result})}
+        metrics_records={"metrics": MetricsRecord({"eval_result": result, "num_row": num})}
     )
-    print(reply)
     return msg.create_reply(reply)
 
 
 @app.query()
 def query(msg: Message, ctx: Context):
     parameters = []
-    record = msg.content.parameters_records["parameters"]
-    for key in list(record.keys()):
-        parameters.append(record[key].data)
-    threshold = client.query_threshold(parameters)
+    record = msg.content.parameters_records.get("parameters", default=None)
+    partition_id: int = msg.content.configs_records["config"]["partition_id"]
+
+    if record is not None:
+        for key in list(record.keys()):
+            parameters.append(record[key].data)
+            
+    threshold = float(client.query_threshold(partition_id, parameters))
     reply = RecordSet(
         configs_records={"config": ConfigsRecord({"threshold": threshold, "sample_rate": SAMPLE_RATE})},
     )
-    print(reply)
     return msg.create_reply(reply)

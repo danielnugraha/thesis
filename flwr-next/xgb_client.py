@@ -2,7 +2,7 @@ from dataloader.dataloader import Dataloader
 from subsampling.subsampling_strategy import SubsamplingStrategy
 
 import xgboost as xgb
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 
 class XGBClientAdaptive():
@@ -20,15 +20,23 @@ class XGBClientAdaptive():
         self.subsampling_method = subsampling_method
         self.bst: Optional[xgb.Booster] = None
 
-    def query_threshold(self, parameters: List[bytes]) -> int:
-        bst = xgb.Booster(params=self.params)
+    def query_threshold(self, partition_id: int, parameters: List[bytes]) -> float:
+        if self.train_dmatrix is None and self.valid_dmatrix is None:
+            self.train_dmatrix, _, = self.dataloader.get_train_dmatrix(node_id=partition_id)
+            self.valid_dmatrix, _ = self.dataloader.get_test_dmatrix(node_id=partition_id)
 
-        for item in parameters:
-            global_model = bytearray(item)
+        if len(parameters)> 0:
+            self.bst = xgb.Booster(params=self.params)
 
-        bst.load_model(global_model)
+            for item in parameters:
+                global_model = bytearray(item)
 
-        preds = bst.predict(self.train_dmatrix, output_margin=True, training=True)
+            self.bst.load_model(global_model)
+        
+        else:
+            self.bst = xgb.Booster(self.params, [self.train_dmatrix])
+
+        preds = self.bst.predict(self.train_dmatrix, output_margin=True, training=True)
         self.subsampling_method.subsample_indices(preds, self.train_dmatrix)
 
         return self.subsampling_method.get_threshold()
@@ -47,9 +55,8 @@ class XGBClientAdaptive():
                 global_model = bytearray(item)
 
             self.bst.load_model(global_model)
-
-        if self.bst is None:
-            raise ValueError("XGBoost is not initialized")
+        else:
+            self.bst = xgb.Booster(self.params, [self.train_dmatrix])
 
         subsample = self.subsampling_method.threshold_subsample(self.train_dmatrix, threshold)
         self.bst.update(subsample, self.bst.num_boosted_rounds())
@@ -86,7 +93,7 @@ class XGBClientAdaptive():
 
         return local_model_bytes
     
-    def evaluate(self, parameters: List[bytes]) -> float:
+    def evaluate(self, parameters: List[bytes]) -> Tuple[float, int]:
         self.bst = xgb.Booster(params=self.params)
 
         for item in parameters:
@@ -99,5 +106,5 @@ class XGBClientAdaptive():
             iteration=self.bst.num_boosted_rounds() - 1,
         )
         
-        return round(float(eval_results.split("\t")[1].split(":")[1]), 4)
+        return round(float(eval_results.split("\t")[1].split(":")[1]), 4), self.valid_dmatrix.num_row()
     

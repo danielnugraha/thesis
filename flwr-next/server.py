@@ -31,6 +31,7 @@ def main(driver: Driver, context: Context) -> None:
     print("Starting XGBoost subsampling run")
     node_ids = []
     eval_results = []
+    centralized_evals = []
 
     while len(node_ids) < num_clients:
         node_ids = driver.get_node_ids()
@@ -41,14 +42,22 @@ def main(driver: Driver, context: Context) -> None:
     for server_round in range(num_rounds):
         print(f"Commencing server round {server_round + 1}")
 
-        global_model = train_workflow(node_ids, server_round, driver, context, global_model)
+        global_model = adaptive_train_workflow(node_ids, server_round, driver, context, global_model)
+        # global_model = train_workflow(node_ids, server_round, driver, context, global_model)
 
         if global_model is not None:
             context.state.parameters_records["parameters"] = ParametersRecord({"global_model": Array("", [], "", global_model)})
+        eval_result = evaluate_workflow(node_ids, server_round, driver, context)
+
+        centralized_eval = centralized_evaluate_workflow(valid_dmatrix, dataset.get_params(), global_model)
+        centralized_evals.append(centralized_eval)
+        if eval_result is None:
+            return
         
-        eval_results.append(centralized_evaluate_workflow(valid_dmatrix, dataset.get_params(), global_model))
+        eval_results.append(eval_result)
     
-    print(eval_results)
+    print("Eval results: ", eval_results)
+    print("Centralized eval results: ", centralized_evals)
 
 
 def train_workflow(node_ids: List[int], current_round: int, driver: Driver, context: Context, global_model: Optional[bytes] = None, recordset: Optional[RecordSet] = None) -> Optional[bytes]:
@@ -71,8 +80,6 @@ def train_workflow(node_ids: List[int], current_round: int, driver: Driver, cont
                 group_id=str(current_round),
             )
         )
-    
-    print(out_messages)
 
     in_messages = list(driver.send_and_receive(out_messages))
     num_failures = len([msg for msg in in_messages if msg.has_error()])
@@ -89,22 +96,22 @@ def train_workflow(node_ids: List[int], current_round: int, driver: Driver, cont
 
 
 def adaptive_train_workflow(node_ids: List[int], current_round: int, driver: Driver, context: Context, global_model: Optional[bytes] = None) -> Optional[bytes]:
-    recordset = RecordSet(
-        # configs_records={"grad_and_hess": ConfigsRecord({"grad": 1, "hess": 1})},
-        configs_records={"config": ConfigsRecord({"threshold": 1, "sample_rate": 1})},
-        parameters_records=context.state.parameters_records,
-    )
-
-    out_messages = [
-        driver.create_message(
-            content=recordset,
-            message_type=MessageType.QUERY,
-            dst_node_id=node_id,
-            group_id=str(current_round),
-            ttl=DEFAULT_TTL,
+    out_messages = []
+    for id, node_id in enumerate(node_ids):
+        record_set = RecordSet(
+            # configs_records={"grad_and_hess": ConfigsRecord({"grad": 1, "hess": 1})},
+            configs_records={"config": ConfigsRecord({"threshold": 1, "sample_rate": 1, "partition_id": id})},
+            parameters_records=context.state.parameters_records,
         )
-        for node_id in node_ids
-    ]
+        out_messages.append(
+            driver.create_message(
+                content=record_set,
+                message_type=MessageType.QUERY,
+                dst_node_id=node_id,
+                group_id=str(current_round),
+                ttl=DEFAULT_TTL,
+            )
+        )
 
     in_messages = list(driver.send_and_receive(out_messages))
     num_failures = len([msg for msg in in_messages if msg.has_error()])
@@ -125,10 +132,43 @@ def adaptive_train_workflow(node_ids: List[int], current_round: int, driver: Dri
     adaptive_threshold = ConfigsRecord({"threshold": threshold})
 
     recordset = RecordSet(
-        configs_records={"config": ConfigsRecord({"threshold": adaptive_threshold})},
+        configs_records={"config": adaptive_threshold},
     )
 
     return train_workflow(node_ids, current_round, driver, context, global_model, recordset)
+
+
+def evaluate_workflow(node_ids: List[int], current_round: int, driver: Driver, context: Context) -> float:
+    out_messages = []
+    for id, node_id in enumerate(node_ids):
+        record_set = RecordSet(
+            parameters_records=context.state.parameters_records,
+            configs_records={"config": ConfigsRecord({"partition_id": id})}
+        )
+
+        out_messages.append(
+            driver.create_message(
+                content=record_set,
+                message_type=MessageType.EVALUATE,
+                dst_node_id=node_id,
+                group_id=str(current_round),
+            )
+        )
+
+    in_messages = list(driver.send_and_receive(out_messages))
+    num_failures = len([msg for msg in in_messages if msg.has_error()])
+
+    if num_failures > 0:
+        return None
+
+    total_num = 0
+    weighted_sum = 0
+    for message in in_messages:
+        metrics = message.content.metrics_records["metrics"]
+        total_num += metrics["num_row"]
+        weighted_sum += metrics["eval_result"] * metrics["num_row"]
+
+    return weighted_sum / total_num
 
 
 def centralized_evaluate_workflow(valid_dmatrix: xgb.DMatrix, params, global_model: Optional[bytes]) -> float:
@@ -143,12 +183,8 @@ def centralized_evaluate_workflow(valid_dmatrix: xgb.DMatrix, params, global_mod
         evals=[(valid_dmatrix, "valid")],
         iteration=bst.num_boosted_rounds() - 1,
     )
-    
-    print(eval_result)
 
     return round(float(eval_result.split("\t")[1].split(":")[1]), 4)
-
-
 
 
 def aggregate(
