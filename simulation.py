@@ -1,5 +1,5 @@
 from dataloader.multiclass_dataloader import CovertypeDataloader, LetterRecognitionDataloader, HelenaDataloader, DionisDataloader
-from dataloader.binary_dataloader import HiggsDataloader, RoadSafetyDataloader, JannisDataloader, AppetencyDataloader, CaliforniaDataloader
+from dataloader.binary_dataloader import HiggsDataloader, RoadSafetyDataloader, JannisDataloader
 from dataloader.regression_dataloader import WineQualityDataloader, AllstateClaimsSeverityDataloader, HouseSalesDataloader, DiamondsDataloader, YearPredictionMSDDataloader, CpuActDataloader
 from flwr_datasets.partitioner import ExponentialPartitioner
 from subsampling.mvs import MVS
@@ -32,7 +32,7 @@ def mvs_simulation():
 
 def mvs_simulation_centralized():
     num_clients = 5
-    dataset = CpuActDataloader(ExponentialPartitioner(num_clients))
+    dataset = EyeMovementsDataloader(ExponentialPartitioner(num_clients))
     sample_rates = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
     
     train_dmatrix, _ = dataset.get_train_dmatrix()
@@ -68,7 +68,7 @@ def load_dataset_try():
 
 def dataset_analysis():
     num_clients = 5
-    dataset = HelenaDataloader(ExponentialPartitioner(num_clients))
+    dataset = DionisDataloader(ExponentialPartitioner(num_clients))
     dataset.dataset_analysis()
 
 def visualise():
@@ -104,9 +104,9 @@ def visualise():
 # load_dataset_try()
 # visualise()
 
-mvs_simulation_centralized()
+# mvs_simulation_centralized()
 
-# dataset_analysis()
+dataset_analysis()
 
 def calculate_average(filename):
     with open(filename, 'r') as file:

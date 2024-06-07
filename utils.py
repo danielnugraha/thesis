@@ -8,9 +8,9 @@ from flwr_datasets.partitioner import (
 )
 from typing import Dict
 from dataloader.dataloader import Dataloader
-from dataloader.multiclass_dataloader import CovertypeDataloader, LetterRecognitionDataloader
-from dataloader.binary_dataloader import HiggsDataloader, RoadSafetyDataloader, MiniBooNEDataloader, EyeMovementsDataloader, JannisDataloader, CaliforniaDataloader
-from dataloader.regression_dataloader import WineQualityDataloader, SuperconductDataloader, CpuActDataloader, DelaysZurichTransportDataloader, AllstateClaimsSeverityDataloader, HouseSalesDataloader, DiamondsDataloader
+from dataloader.multiclass_dataloader import CovertypeDataloader, HelenaDataloader, DionisDataloader
+from dataloader.binary_dataloader import HiggsDataloader, RoadSafetyDataloader, JannisDataloader
+from dataloader.regression_dataloader import WineQualityDataloader, AllstateClaimsSeverityDataloader, HouseSalesDataloader, DiamondsDataloader
 
 CORRELATION_TO_PARTITIONER = {
     "uniform": IidPartitioner,
@@ -21,20 +21,15 @@ CORRELATION_TO_PARTITIONER = {
 
 DATALOADER_MAPPING: Dict[str, Partitioner] = {
     "covertype": CovertypeDataloader,
-    "letter_recognition": LetterRecognitionDataloader,
     "higgs": HiggsDataloader,
     "road_safety": RoadSafetyDataloader,
-    "mini_boone": MiniBooNEDataloader,
-    "eye_movements": EyeMovementsDataloader,
     "jannis": JannisDataloader,
-    "california": CaliforniaDataloader,
     "wine_quality": WineQualityDataloader,
-    "superconduct": SuperconductDataloader,
-    "cpu_act": CpuActDataloader,
-    "delays_zurich_transport": DelaysZurichTransportDataloader,
     "allstate_claims_severity": AllstateClaimsSeverityDataloader,
     "house_sales": HouseSalesDataloader,
     "diamonds": DiamondsDataloader,
+    "helena": HelenaDataloader,
+    "dionis": DionisDataloader,
 }
 
 

@@ -8,7 +8,7 @@ sleep 10  # Sleep for 30s to give the server enough time to start
 
 for i in `seq 0 2`; do
     echo "Starting client $i"
-    python3 client.py --partition-id=$i --num-partitions=3 --partitioner-type=linear --dataloader=cpu_act --sample-rate=0.5 &
+    python3 client.py --partition-id=$i --num-partitions=3 --partitioner-type=linear --dataloader=eye_movements --sample-rate=0.5 &
 done
 
 # Enable CTRL+C to stop all background processes
@@ -29,3 +29,12 @@ wait
 # Next meeting TUM Innenstadt Tuesday afternoon 2pm (try to find seats in StudiTUM).
 # run uniform sampling
 # try to visualise federated learning with xgboost and subsampling
+
+# add xgboost native sampling and random sampling
+# add openml api
+# integrate training duration, communication cost, and as metrics and allow them to be activated via command line
+# create run script that will run only by calling the script
+# read the files and condense it to one txt as result
+# plot the graph after the training
+# comparison with other sampling strategies will be resolved later
+# for mvs plot communication and training duration as well
