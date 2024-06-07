@@ -21,7 +21,7 @@ from .env import SUBSAMPLING, DATASET, NUM_TRAIN_CLIENTS, NUM_ROUNDS
 subsampling = SUBSAMPLING
 dataset = DATASET
 num_clients = NUM_TRAIN_CLIENTS
-num_rounds = NUM_ROUNDS
+num_rounds = 2
 
 # Run via `flower-server-app server:app`
 app = fl.server.ServerApp()
@@ -42,8 +42,8 @@ def main(driver: Driver, context: Context) -> None:
     for server_round in range(num_rounds):
         print(f"Commencing server round {server_round + 1}")
 
-        global_model = adaptive_train_workflow(node_ids, server_round, driver, context, global_model)
-        # global_model = train_workflow(node_ids, server_round, driver, context, global_model)
+        # global_model = adaptive_train_workflow(node_ids, server_round, driver, context, global_model)
+        global_model = train_workflow(node_ids, server_round, driver, context, global_model)
 
         if global_model is not None:
             context.state.parameters_records["parameters"] = ParametersRecord({"global_model": Array("", [], "", global_model)})
@@ -183,6 +183,8 @@ def centralized_evaluate_workflow(valid_dmatrix: xgb.DMatrix, params, global_mod
         evals=[(valid_dmatrix, "valid")],
         iteration=bst.num_boosted_rounds() - 1,
     )
+
+    bst.save_model(f"federated_xgboost_{bst.num_boosted_rounds()}.json")
 
     return round(float(eval_result.split("\t")[1].split(":")[1]), 4)
 

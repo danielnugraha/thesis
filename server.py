@@ -15,7 +15,7 @@ from server_utils import (
     CyclicClientManager,
 )
 from dataloader.multiclass_dataloader import CovertypeDataloader
-from dataloader.binary_dataloader import HiggsDataloader
+from dataloader.binary_dataloader import HiggsDataloader, JannisDataloader, CaliforniaDataloader
 from dataloader.regression_dataloader import WineQualityDataloader, HouseSalesDataloader, AllstateClaimsSeverityDataloader
 
 
@@ -37,7 +37,7 @@ print("Min evaluate clients: ", num_evaluate_clients)
 
 # Load centralised test set
 if centralised_eval:
-    dataloader = AllstateClaimsSeverityDataloader(partitioner=partitioner.IidPartitioner(
+    dataloader = CovertypeDataloader(partitioner=partitioner.IidPartitioner(
                     num_partitions=20
                 ))
     
@@ -72,7 +72,7 @@ else:
     )
 
 # Start Flower server
-fl.server.start_server(
+hist = fl.server.start_server(
     server_address="0.0.0.0:8080",
     config=fl.server.ServerConfig(num_rounds=num_rounds),
     strategy=strategy,

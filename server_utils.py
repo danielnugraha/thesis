@@ -6,6 +6,7 @@ from flwr.common import Parameters, Scalar
 from flwr.server.client_manager import SimpleClientManager
 from flwr.server.client_proxy import ClientProxy
 from flwr.server.criterion import Criterion
+import json
 
 
 def eval_config(rnd: int) -> Dict[str, str]:
@@ -23,15 +24,31 @@ def fit_config(rnd: int) -> Dict[str, str]:
     }
     return config
 
-evals = []
+rate = 0.2
+evals = {0.2: []}
+num_rounds = 1
+
 
 def evaluate_metrics_aggregation(eval_metrics):
     """Return an aggregated metric (AUC) for evaluation."""
+    global rate, num_rounds, evals
     total_num = sum([num for num, _ in eval_metrics])
     auc_aggregated = (
         sum([metrics["AUC"] * num for num, metrics in eval_metrics]) / total_num
     )
-    evals.append(auc_aggregated)
+
+    evals[rate].append(round(auc_aggregated, 4))
+
+    if num_rounds % 150 == 0:
+        rate += 0.1
+        evals[rate] = []
+
+    if num_rounds == 1500:
+        print("Writing to a file")
+        with open('data.json', 'w') as file:
+            json.dump(eval, file, indent=4)
+    num_rounds += 1
+    
     print("Aggregate evals: ", evals)
     metrics_aggregated = {"AUC": auc_aggregated}
     return metrics_aggregated
@@ -45,6 +62,7 @@ def get_evaluate_fn(test_data, params):
         server_round: int, parameters: Parameters, config: Dict[str, Scalar]
     ):
         # If at the first round, skip the evaluation
+        global rate
         if server_round == 0:
             return 0, {}
         else:
@@ -60,9 +78,13 @@ def get_evaluate_fn(test_data, params):
                 iteration=bst.num_boosted_rounds() - 1,
             )
             auc = round(float(eval_results.split("\t")[1].split(":")[1]), 4)
-            log(INFO, f"AUC = {auc} at round {server_round}")
-            log(INFO, f"Adding AUC = {auc} to array")
-            evals.append(auc)
+            
+            evals[rate].append(auc)
+
+            if server_round % 150 == 0:
+                rate += 0.1
+                evals[rate] = []
+            
             log(INFO, f"Eval results: {evals}")
 
             return 0, {"AUC": auc}

@@ -6,13 +6,13 @@ from flwr_datasets import FederatedDataset
 from flwr.common.logger import log
 
 from utils import (
-    instantiate_partitioner,
+    instantiate_partitioner, instantiate_dataloader,
 )
 from utils import client_args_parser, NUM_LOCAL_ROUND
 from client_utils import XgbClient
 from subsampling.mvs import MVS
 from dataloader.multiclass_dataloader import CovertypeDataloader
-from dataloader.binary_dataloader import HiggsDataloader
+from dataloader.binary_dataloader import HiggsDataloader, JannisDataloader
 from dataloader.regression_dataloader import WineQualityDataloader, HouseSalesDataloader, AllstateClaimsSeverityDataloader
 
 
@@ -25,6 +25,7 @@ args = client_args_parser()
 
 # Train method (bagging or cyclic)
 train_method = args.train_method
+sample_rate = args.sample_rate
 
 # Instantiate partitioner from ["uniform", "linear", "square", "exponential"]
 partitioner = instantiate_partitioner(
@@ -33,9 +34,10 @@ partitioner = instantiate_partitioner(
 
 # Load the partition for this `partition_id`
 log(INFO, "Loading partition...")
-dataloader = AllstateClaimsSeverityDataloader(partitioner)
+dataloader = instantiate_dataloader(args.dataloader, partitioner)
+# dataloader = CovertypeDataloader(partitioner)
 train_dmatrix, num_train, = dataloader.get_train_dmatrix(node_id=args.partition_id)
-valid_dmatrix, num_val = dataloader.get_test_dmatrix(node_id=args.partition_id if args.centralised_eval else None)
+valid_dmatrix, num_val = dataloader.get_test_dmatrix(node_id=args.partition_id)
 
 # Hyper-parameters for xgboost training
 num_local_round = NUM_LOCAL_ROUND
@@ -57,7 +59,8 @@ fl.client.start_client(
         num_local_round,
         params,
         train_method,
-        MVS(dataloader.get_objective(), sample_rate=0.9),
+        dataloader.get_objective(), 
+        sample_rate,
         args.visualise,
     ),
 )

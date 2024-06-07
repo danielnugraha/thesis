@@ -1,10 +1,16 @@
 import argparse
 from flwr_datasets.partitioner import (
+    Partitioner,
     IidPartitioner,
     LinearPartitioner,
     SquarePartitioner,
     ExponentialPartitioner,
 )
+from typing import Dict
+from dataloader.dataloader import Dataloader
+from dataloader.multiclass_dataloader import CovertypeDataloader, LetterRecognitionDataloader
+from dataloader.binary_dataloader import HiggsDataloader, RoadSafetyDataloader, MiniBooNEDataloader, EyeMovementsDataloader, JannisDataloader, CaliforniaDataloader
+from dataloader.regression_dataloader import WineQualityDataloader, SuperconductDataloader, CpuActDataloader, DelaysZurichTransportDataloader, AllstateClaimsSeverityDataloader, HouseSalesDataloader, DiamondsDataloader
 
 CORRELATION_TO_PARTITIONER = {
     "uniform": IidPartitioner,
@@ -12,6 +18,32 @@ CORRELATION_TO_PARTITIONER = {
     "square": SquarePartitioner,
     "exponential": ExponentialPartitioner,
 }
+
+DATALOADER_MAPPING: Dict[str, Partitioner] = {
+    "covertype": CovertypeDataloader,
+    "letter_recognition": LetterRecognitionDataloader,
+    "higgs": HiggsDataloader,
+    "road_safety": RoadSafetyDataloader,
+    "mini_boone": MiniBooNEDataloader,
+    "eye_movements": EyeMovementsDataloader,
+    "jannis": JannisDataloader,
+    "california": CaliforniaDataloader,
+    "wine_quality": WineQualityDataloader,
+    "superconduct": SuperconductDataloader,
+    "cpu_act": CpuActDataloader,
+    "delays_zurich_transport": DelaysZurichTransportDataloader,
+    "allstate_claims_severity": AllstateClaimsSeverityDataloader,
+    "house_sales": HouseSalesDataloader,
+    "diamonds": DiamondsDataloader,
+}
+
+
+def instantiate_dataloader(dataloader_type: str, partitioner: Partitioner) -> Dataloader:
+    """Initialise dataloader based on selected dataloader type and additional
+    keyword arguments."""
+    dataloader_class = DATALOADER_MAPPING[dataloader_type]
+    dataloader = dataloader_class(partitioner)
+    return dataloader
 
 
 def instantiate_partitioner(partitioner_type: str, num_partitions: int):
@@ -49,15 +81,27 @@ def client_args_parser():
         help="Partitioner types.",
     )
     parser.add_argument(
+        "--dataloader",
+        default="covertype",
+        type=str,
+        choices=[
+            "covertype", "letter_recognition", "higgs", "road_safety", "mini_boone",
+            "eye_movements", "jannis", "california", "wine_quality", "superconduct",
+            "cpu_act", "delays_zurich_transport", "allstate_claims_severity", 
+            "house_sales", "diamonds"
+        ],
+        help="Dataloader types.",
+    )
+    parser.add_argument(
         "--partition-id",
         default=0,
         type=int,
         help="Partition ID used for the current client.",
     )
     parser.add_argument(
-        "--sampling-rate",
+        "--sample-rate",
         default=0.1,
-        type=int,
+        type=float,
         help="Sampling rate .",
     )
 

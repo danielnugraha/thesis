@@ -1,13 +1,9 @@
 import numpy as np
 import xgboost as xgb
-from thesis_dataset import create_centralized_dataset, ThesisDataset
-from utils import softprob_obj, params, rmse_obj
-from subsampling_strategy import SubsamplingStrategy
+from subsampling.subsampling_strategy import SubsamplingStrategy
 from visualization import plot_tree, plot_labels
-from dataloader import IrisDataloader
-from mvs import MVS
 from flwr_datasets.partitioner import IidPartitioner
-from wine_quality_dataloader import WineQualityDataloader
+from typing import Optional, Tuple
 
 
 # start learning after 1.0 / learning rate
@@ -66,6 +62,16 @@ class GOSS(SubsamplingStrategy):
         self.objective = objective
         self.a = a
         self.b = b
+        self.regularized_gradients_cache: Optional[np.ndarray] = None
+        self.threshold = []
+
+    def threshold_subsample(self, train_dmatrix: xgb.DMatrix, threshold: int) -> xgb.DMatrix:
+        if self.regularized_gradients_cache is None:
+            raise ValueError("No regularized gradients in memory.")
+        
+        indices = np.where(self.regularized_gradients_cache >= threshold)[0]
+        new_train_dmatrix = train_dmatrix.slice(indices)
+        return new_train_dmatrix
 
     def subsample(self, predictions: np.ndarray, train_dmatrix: xgb.DMatrix) -> xgb.DMatrix:
         fact = (1 - self.a) / self.b
@@ -75,7 +81,7 @@ class GOSS(SubsamplingStrategy):
         gradients, _ = self.objective(predictions, train_dmatrix)
 
         weights = np.ones_like(train_dmatrix.get_label())
-        sorted_indices = np.argsort(np.abs(np.sum(gradients, axis=1, keepdims=False)))
+        sorted_indices = np.argsort(np.abs(np.sum(gradients, axis=1, keepdims=False) if gradients.ndim > 1 else gradients))
         topSet = sorted_indices[:int(topN)]
         randSet = np.random.choice(sorted_indices[int(topN):], int(randN), replace=False)
         usedSet = np.concatenate([topSet, randSet])
@@ -84,6 +90,12 @@ class GOSS(SubsamplingStrategy):
         new_train_dmatrix.set_weight(weights[usedSet])
 
         return new_train_dmatrix
+    
+    def subsample_indices(self, predictions: np.ndarray, train_dmatrix: xgb.DMatrix, grad_hess: Optional[Tuple[np.ndarray, np.ndarray]] = None) -> np.ndarray:
+        pass
+
+    def grad_and_hess(self, predictions: np.ndarray, train_dmatrix: xgb.DMatrix) -> tuple[np.ndarray, np.ndarray]:
+        pass
     
     def global_sampling(self, grad_hess_dict: dict[int, list[(float, float)]]) -> dict[int, list[int]]:
         sampling_values = {}
@@ -96,4 +108,7 @@ class GOSS(SubsamplingStrategy):
 
         all_gradients = np.array(all_gradients)
         all_hessians = np.array(all_hessians)
+
+    def get_threshold(self) -> int:
+        return self.threshold[-1]
 

@@ -23,7 +23,6 @@ def softprob_obj(predt: np.ndarray, data: xgb.DMatrix):
     # represents a raw prediction (leaf weight, hasn't gone through softmax
     # yet).  In XGBoost 1.0.0, the prediction is transformed by a softmax
     # function, fixed in later versions.
-    print("preds: ", predt.shape)
     grad = np.zeros_like(predt)
     hess = np.zeros_like(predt)
 
@@ -85,7 +84,15 @@ def rmsle_obj(predt: np.ndarray, data: xgb.DMatrix):
     else:
         weights = data.get_weight()
 
-    predt = max(predt, -1 + 1e-6)
-    grad = (math.log1p(predt) - math.log1p(labels)) / (predt + 1)
-    hess = max((-math.log1p(predt) + math.log1p(labels) + 1) / ((predt + 1) ** 2), 1e-6)
+    predt = np.maximum(predt, -1 + 1e-6)
+    grad = (np.log1p(predt) - np.log1p(labels)) / (predt + 1)
+    hess = np.maximum((-np.log1p(predt) + np.log1p(labels) + 1) / ((predt + 1) ** 2), 1e-6)
     return grad * weights, hess * weights
+
+def absolute_error_obj(predt: np.ndarray, data: xgb.DMatrix):
+    x = predt - labels
+    grad = np.sign(x) 
+    grad[np.abs(x) < alpha] = 2/alpha*x[np.abs(x) < alpha]
+    hess = np.zeros_like(labels) 
+    hess[np.abs(x) < alpha] = 2/alpha
+    return grad, hess

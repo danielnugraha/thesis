@@ -4,9 +4,13 @@ from flwr_datasets.resplitter import Resplitter
 from typing import Optional, Union, Dict, Tuple
 import xgboost as xgb
 import numpy as np
-from objective import rmse_obj
+from objective import rmse_obj, rmsle_obj
 from datasets import Dataset, DatasetDict, load_dataset
 from dataloader.dataloader import Dataloader, train_test_split
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.io import arff
 
 class WineQualityDataloader(Dataloader):
 
@@ -176,14 +180,14 @@ class CpuActDataloader(Dataloader):
         return self._transform_dataset_to_dmatrix(data=test_data), test_data.shape[0]
 
     def get_objective(self):
-        return rmse_obj
+        return rmsle_obj
     
     def get_params(self):
         return {
-            "objective": "reg:squarederror",
-            "eta": 0.1,  # Learning rate
-            "max_depth": 8,
-            "eval_metric": "rmse",
+            "objective": "reg:squaredlogerror",
+            "eta": 0.05,  # Learning rate
+            "max_depth": 6,
+            "eval_metric": "mae",
             "nthread": 16,
             "num_parallel_tree": 1,
             "subsample": 1,
@@ -460,3 +464,106 @@ class DiamondsDataloader(Dataloader):
         y = data['price']
         new_data = xgb.DMatrix(x, label=y)
         return new_data
+    
+
+class YearPredictionMSDDataloader(Dataloader):
+    def __init__(self, partitioner: Partitioner, resplitter: Optional[Union[Resplitter, Dict[str, Tuple[str, ...]]]] = None,) -> None:
+        data = arff.loadarff('./dataloader/yearpredictionmsd_dataset.arff')
+        self.dataset = Dataset.from_pandas(pd.DataFrame(data[0]))
+        partitioner.dataset = self.dataset
+        self.partitioner = partitioner
+        self.resplitter = resplitter    
+
+    def get_train_dmatrix(self, node_id: Optional[int] = None) -> tuple[xgb.DMatrix, int]:
+        if node_id is None:
+            partition = self.dataset
+        else:
+            partition = partition = self.partitioner.load_partition(node_id=node_id)
+        
+        partition.set_format("numpy")
+        train_data, _ = train_test_split(
+            partition, test_fraction=0.2, seed=42
+        )
+        
+        return self._transform_dataset_to_dmatrix(data=train_data), train_data.shape[0]
+    
+    def get_test_dmatrix(self, node_id: Optional[int]) -> tuple[xgb.DMatrix, int]:
+        if node_id is None:
+            partition = self.dataset
+        else:
+            partition = partition = self.partitioner.load_partition(node_id=node_id)
+        
+        partition.set_format("numpy")
+        _, test_data = train_test_split(
+            partition, test_fraction=0.2, seed=42
+        )
+        
+        return self._transform_dataset_to_dmatrix(data=test_data), test_data.shape[0]
+
+    def get_objective(self):
+        return rmse_obj
+    
+    def get_params(self):
+        return {
+            "objective": "reg:squarederror",
+            "eta": 0.1,  # Learning rate
+            "max_depth": 8,
+            "eval_metric": "rmse",
+            "nthread": 16,
+            "num_parallel_tree": 1,
+            "subsample": 1,
+            "tree_method": "hist",
+        }
+
+    def get_num_classes(self):
+        return -1
+
+    def set_partitioner(self, partitioner: Partitioner) -> None:
+        partitioner.dataset = self.dataset
+        self.partitioner = partitioner
+
+    def _transform_dataset_to_dmatrix(self, data: Union[Dataset, DatasetDict]) -> xgb.core.DMatrix:
+        x_dict = data.with_format("np", ['carat', 'depth', 'table', 'x', 'y', 'z'])[:]
+        x_arrays = list(x_dict.values())
+        x = np.stack(x_arrays, axis=1)
+        y = data['price']
+        new_data = xgb.DMatrix(x, label=y)
+        return new_data
+    
+    def dataset_analysis(self, node_id: Optional[int] = None):
+        if node_id is None:
+            partition = self.dataset
+        else:
+            partition = self.partitioner.load_partition(node_id=node_id)
+        
+        df = partition.to_pandas()
+
+        print(df.describe())
+        print(df.info())
+        print(df.head())
+        
+        # Plot distribution and correlation
+        fig, axs = plt.subplots(10, 10, figsize=(20, 25))
+        axs = axs.flatten()
+
+        # Plot histograms for each feature
+        for i, col in enumerate(df.columns):
+            sns.histplot(df[col], bins=30, kde=True, ax=axs[i])
+            axs[i].set_title(f'Distribution of {col}')
+
+        # Hide any remaining empty subplots
+        for j in range(i+1, len(axs)):
+            fig.delaxes(axs[j])
+
+        # Plot the correlation matrix
+        plt.figure(figsize=(45, 30))
+        corr_matrix = df.corr()
+        sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt=".2f")
+        plt.title('Correlation Matrix')
+        plt.tight_layout()
+        plt.savefig('_static/yearpredictionmsd_correlation_matrix.png')
+        plt.close()
+
+        # Save all plots to a single PNG file
+        fig.tight_layout()
+        fig.savefig('_static/yearpredictionmsd_analysis.png')

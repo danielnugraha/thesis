@@ -2,6 +2,7 @@ from logging import INFO
 import xgboost as xgb
 from subsampling.subsampling_strategy import SubsamplingStrategy
 import flwr as fl
+import csv
 from flwr.common.logger import log
 from flwr.common import (
     Code,
@@ -15,6 +16,8 @@ from flwr.common import (
     Status,
 )
 from dataloader.dataloader import Dataloader
+from subsampling.mvs import MVS
+from subsampling.goss import GOSS
 
 
 class XgbClient(fl.client.Client):
@@ -27,8 +30,9 @@ class XgbClient(fl.client.Client):
         num_local_round,
         params,
         train_method,
-        subsampling_method: SubsamplingStrategy,
-        visualise: bool,
+        objective,
+        sample_rate=0.1,
+        visualise: bool = False,
     ):
         self.train_dmatrix = train_dmatrix
         self.valid_dmatrix = valid_dmatrix
@@ -36,8 +40,11 @@ class XgbClient(fl.client.Client):
         self.num_val = num_val
         self.num_local_round = num_local_round
         self.params = params
-        self.train_method = train_method
-        self.subsampling_method = subsampling_method
+        self.train_method = train_method 
+        self.objective = objective
+        self.sample_rate = sample_rate
+        self.subsampling_method = MVS(self.objective, sample_rate=self.sample_rate)
+        # self.subsampling_method = GOSS(self.objective, self.sample_rate/2, self.sample_rate/2)
         self.visualise = visualise
 
     def get_parameters(self, ins: GetParametersIns) -> GetParametersRes:
@@ -53,7 +60,7 @@ class XgbClient(fl.client.Client):
     def _local_boost(self, bst_input: xgb.Booster):
         # Update trees based on local training data.
         for i in range(self.num_local_round):
-            preds = bst_input.predict(self.train_dmatrix, output_margin=True, training=True)
+            preds = bst_input.predict(self.train_dmatrix, training=True)
             new_train_dmatrix = self.subsampling_method.subsample(preds, self.train_dmatrix)
             bst_input.update(new_train_dmatrix, bst_input.num_boosted_rounds())
 
@@ -90,7 +97,14 @@ class XgbClient(fl.client.Client):
         # Save model
         local_model = bst.save_raw("json")
         local_model_bytes = bytes(local_model)
+        byte_size = len(local_model_bytes)
 
+        csv_file_name = f'_static/{global_round}.csv'
+        with open(csv_file_name, mode='a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([byte_size])
+
+        print("model bytes size: ", len(local_model_bytes))
         return FitRes(
             status=Status(
                 code=Code.OK,
