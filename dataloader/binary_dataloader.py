@@ -60,12 +60,6 @@ class HiggsDataloader(BinaryDataloader):
         df = df.drop(columns=['inputs']).join(inputs_expanded)
         return df
     
-    def _create_analysis_subplots(self) -> Tuple[plt.Figure, Any]:
-        return plt.subplots(7, 5, figsize=(20, 25))
-    
-    def _set_correlation_figure_size(self) -> Tuple[float, float]:
-        return (15, 10)
-    
 
 class RoadSafetyDataloader(Dataloader):
 
@@ -89,15 +83,6 @@ class RoadSafetyDataloader(Dataloader):
         y = data['SexofDriver']
         new_data = xgb.DMatrix(x, label=y)
         return new_data
-    
-    def _preprocess_to_pandas(self, partition: Dataset) -> pd.DataFrame:
-        return partition.to_pandas()
-    
-    def _create_analysis_subplots(self) -> Tuple[plt.Figure, Any]:
-        return plt.subplots(7, 5, figsize=(20, 25))
-    
-    def _set_correlation_figure_size(self) -> Tuple[float, float]:
-        return (15, 10)
 
 
 class JannisDataloader(Dataloader):
@@ -122,12 +107,3 @@ class JannisDataloader(Dataloader):
         y = data['class']
         new_data = xgb.DMatrix(x, label=y)
         return new_data
-    
-    def _preprocess_to_pandas(self, partition: Dataset) -> pd.DataFrame:
-        return partition.to_pandas()
-    
-    def _create_analysis_subplots(self) -> Tuple[plt.Figure, Any]:
-        return plt.subplots(7, 5, figsize=(20, 25))
-    
-    def _set_correlation_figure_size(self) -> Tuple[float, float]:
-        return (15, 10)

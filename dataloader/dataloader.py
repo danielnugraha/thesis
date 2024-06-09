@@ -70,13 +70,13 @@ class Dataloader:
         raise NotImplementedError("This method needs to be implemented by subclasses")
     
     def _preprocess_to_pandas(self, partition: Dataset) -> pd.DataFrame:
-        raise NotImplementedError("This method needs to be implemented by subclasses")
+        return partition.to_pandas()
     
     def _create_analysis_subplots(self) -> Tuple[plt.Figure, Any]:
-        raise NotImplementedError("This method needs to be implemented by subclasses")
+        return plt.subplots(7, 5, figsize=(20, 25))
     
     def _set_correlation_figure_size(self) -> Tuple[float, float]:
-        raise NotImplementedError("This method needs to be implemented by subclasses")
+        return (15, 10)
     
 
 def train_test_split(partition: Dataset, test_fraction: float, seed: int):

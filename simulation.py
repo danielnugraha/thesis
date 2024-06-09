@@ -1,6 +1,4 @@
-from dataloader.multiclass_dataloader import CovertypeDataloader, LetterRecognitionDataloader, HelenaDataloader, DionisDataloader
-from dataloader.binary_dataloader import HiggsDataloader, RoadSafetyDataloader, JannisDataloader
-from dataloader.regression_dataloader import WineQualityDataloader, AllstateClaimsSeverityDataloader, HouseSalesDataloader, DiamondsDataloader, YearPredictionMSDDataloader, CpuActDataloader
+from dataloader import Dataloader, CovertypeDataloader, HelenaDataloader, DionisDataloader, HiggsDataloader, RoadSafetyDataloader, JannisDataloader, WineQualityDataloader, AllstateClaimsSeverityDataloader, HouseSalesDataloader, DiamondsDataloader
 from flwr_datasets.partitioner import ExponentialPartitioner
 from subsampling.mvs import MVS
 import xgboost as xgb

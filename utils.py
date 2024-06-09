@@ -7,10 +7,7 @@ from flwr_datasets.partitioner import (
     ExponentialPartitioner,
 )
 from typing import Dict
-from dataloader.dataloader import Dataloader
-from dataloader.multiclass_dataloader import CovertypeDataloader, HelenaDataloader, DionisDataloader
-from dataloader.binary_dataloader import HiggsDataloader, RoadSafetyDataloader, JannisDataloader
-from dataloader.regression_dataloader import WineQualityDataloader, AllstateClaimsSeverityDataloader, HouseSalesDataloader, DiamondsDataloader
+from dataloader import Dataloader, CovertypeDataloader, HelenaDataloader, DionisDataloader, HiggsDataloader, RoadSafetyDataloader, JannisDataloader, WineQualityDataloader, AllstateClaimsSeverityDataloader, HouseSalesDataloader, DiamondsDataloader
 
 CORRELATION_TO_PARTITIONER = {
     "uniform": IidPartitioner,
@@ -237,6 +234,21 @@ def sim_args_parser():
         "--scaled-lr",
         action="store_true",
         help="Perform scaled learning rate based on the number of clients (True).",
+    )
+
+    args = parser.parse_args()
+    return args
+
+
+def metrics_args_parser():
+    """Parse arguments to combine different metrics into one file."""
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        choices=["covertype", "higgs", "road_safety", "jannis", "wine_quality", "allstate_claims_severity", "house_sales", "diamonds", "helena", "dionis"],
+        help="Dataset you want to track its metric.",
     )
 
     args = parser.parse_args()
