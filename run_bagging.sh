@@ -27,11 +27,11 @@ start_clients() {
 
 run_repetitions() {
     local num_clients=$1
-    sample_rates=(0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0)
     local dataloader=$2
     local num_rounds=$3
     local partitioner_type=$4
     local sampling_method=$5
+    local sample_rates=("${!6}")
 
     for sample_rate in "${sample_rates[@]}"; do
         echo "Starting repetition with sample rate $sample_rate for $num_clients clients, dataloader $dataloader, num_rounds $num_rounds, partitioner_type $partitioner_type, and sampling method $sampling_method"
@@ -52,7 +52,7 @@ run_repetitions() {
 cd "$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"/
 
 if [ "$#" -lt 5 ]; then
-    echo "Usage: $0 <comma-separated-list-of-client-numbers> <comma-separated-partitioner-types> <comma-separated-dataloaders> <comma-separated-num-rounds> <comma-separated-sampling-methods>"
+    echo "Usage: $0 <comma-separated-list-of-client-numbers> <comma-separated-partitioner-types> <comma-separated-dataloaders> <comma-separated-num-rounds> <comma-separated-sampling-methods> [comma-separated-sample-rates]"
     exit 1
 fi
 
@@ -61,6 +61,11 @@ IFS=',' read -ra PARTITIONER_TYPES <<< "$2"
 IFS=',' read -ra DATALOADERS <<< "$3"
 IFS=',' read -ra NUM_ROUNDS <<< "$4"
 IFS=',' read -ra SAMPLING_METHODS <<< "$5"
+if [ -n "$6" ]; then
+    IFS=',' read -ra SAMPLE_RATES <<< "$6"
+else
+    SAMPLE_RATES=(0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0)
+fi
 
 for dataloader in "${DATALOADERS[@]}"; do
     for sampling_method in "${SAMPLING_METHODS[@]}"; do
@@ -71,7 +76,7 @@ for dataloader in "${DATALOADERS[@]}"; do
                     python3 centralized.py --num-rounds $num_rounds --sampling-method $sampling_method --dataloader $dataloader
                 else
                     for partitioner_type in "${PARTITIONER_TYPES[@]}"; do
-                        run_repetitions $num_clients $dataloader $num_rounds $partitioner_type $sampling_method
+                        run_repetitions $num_clients $dataloader $num_rounds $partitioner_type $sampling_method SAMPLE_RATES[@]
                     done
                 fi
             done
