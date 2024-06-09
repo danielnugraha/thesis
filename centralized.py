@@ -21,14 +21,23 @@ valid_dmatrix, num_val = dataloader.get_test_dmatrix()
 
 for sample_rate in sample_rates:
     subsampling_strategy = instantiate_sampling_method(sampling_method, dataloader.get_objective(), sample_rate)
+    params = dataloader.get_params()
+    if subsampling_strategy is None:
+        params.update({"subsample": sample_rate})
+    
+    print(params)
+    
     eval_results = []
 
-    bst = xgb.Booster(dataloader.get_params(), [train_dmatrix])
+    bst = xgb.Booster(params, [train_dmatrix])
 
     for i in range(num_rounds):
-        preds = bst.predict(train_dmatrix, output_margin=True, training=True)
-        new_train_dmatrix = subsampling_strategy.subsample(preds, train_dmatrix)
-        bst.update(new_train_dmatrix, bst.num_boosted_rounds())
+        if subsampling_strategy is None:
+            bst.update(train_dmatrix, bst.num_boosted_rounds())
+        else:
+            preds = bst.predict(train_dmatrix, output_margin=True, training=True)
+            new_train_dmatrix = subsampling_strategy.subsample(preds, train_dmatrix)
+            bst.update(new_train_dmatrix, bst.num_boosted_rounds())
 
         evaluate = bst.eval_set([(valid_dmatrix, "test")])
         auc = round(float(evaluate.split("\t")[1].split(":")[1]), 4)

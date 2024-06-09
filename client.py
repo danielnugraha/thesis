@@ -6,9 +6,9 @@ from flwr_datasets import FederatedDataset
 from flwr.common.logger import log
 
 from utils import (
-    instantiate_partitioner, instantiate_dataloader,
+    instantiate_partitioner, instantiate_dataloader, instantiate_sampling_method
 )
-from utils import client_args_parser, NUM_LOCAL_ROUND
+from utils import generic_args_parser, NUM_LOCAL_ROUND
 from client_utils import XgbClient
 from subsampling.mvs import MVS
 from dataloader.multiclass_dataloader import CovertypeDataloader
@@ -21,11 +21,12 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 # Parse arguments for experimental settings
 # Add arguments for subsampling strategy and dataset you want to use
-args = client_args_parser()
+args = generic_args_parser()
 
 # Train method (bagging or cyclic)
-train_method = args.train_method
 sample_rate = args.sample_rate
+partitioner_type = args.partitioner_type
+sampling_method = args.sampling_method
 
 # Instantiate partitioner from ["uniform", "linear", "square", "exponential"]
 partitioner = instantiate_partitioner(
@@ -43,10 +44,11 @@ valid_dmatrix, num_val = dataloader.get_test_dmatrix(node_id=args.partition_id)
 num_local_round = NUM_LOCAL_ROUND
 params = dataloader.get_params()
 
-# Setup learning rate
-if args.train_method == "bagging" and args.scaled_lr:
-    new_lr = params["eta"] / args.num_partitions
-    params.update({"eta": new_lr})
+subsampling_strategy = instantiate_sampling_method(sampling_method, dataloader.get_objective(), sample_rate)
+if subsampling_strategy is None:
+    params.update({"subsample": sample_rate})
+
+print(params)
 
 # Start Flower client
 fl.client.start_client(
@@ -58,10 +60,7 @@ fl.client.start_client(
         num_val,
         num_local_round,
         params,
-        train_method,
-        dataloader.get_objective(), 
-        sample_rate,
-        args.visualise,
+        subsampling_strategy
     ),
 )
 

@@ -61,7 +61,7 @@ class HiggsDataloader(BinaryDataloader):
         return df
     
 
-class RoadSafetyDataloader(Dataloader):
+class RoadSafetyDataloader(BinaryDataloader):
 
     def __init__(self, partitioner: Partitioner) -> None:
         super().__init__("road_safety")
@@ -85,7 +85,7 @@ class RoadSafetyDataloader(Dataloader):
         return new_data
 
 
-class JannisDataloader(Dataloader):
+class JannisDataloader(BinaryDataloader):
 
     def __init__(self, partitioner: Partitioner) -> None:
         super().__init__("jannis")

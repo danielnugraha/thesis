@@ -2,7 +2,6 @@ from logging import INFO
 import xgboost as xgb
 from subsampling.subsampling_strategy import SubsamplingStrategy
 import flwr as fl
-import csv
 from flwr.common.logger import log
 from flwr.common import (
     Code,
@@ -15,9 +14,7 @@ from flwr.common import (
     Parameters,
     Status,
 )
-from dataloader.dataloader import Dataloader
-from subsampling.mvs import MVS
-from subsampling.goss import GOSS
+from typing import Optional
 
 
 class XgbClient(fl.client.Client):
@@ -29,23 +26,15 @@ class XgbClient(fl.client.Client):
         num_val,
         num_local_round,
         params,
-        train_method,
-        objective,
-        sample_rate=0.1,
-        visualise: bool = False,
+        subsampling,
     ):
         self.train_dmatrix = train_dmatrix
         self.valid_dmatrix = valid_dmatrix
         self.num_train = num_train
         self.num_val = num_val
         self.num_local_round = num_local_round
-        self.params = params
-        self.train_method = train_method 
-        self.objective = objective
-        self.sample_rate = sample_rate
-        self.subsampling_method = MVS(self.objective, sample_rate=self.sample_rate)
-        # self.subsampling_method = GOSS(self.objective, self.sample_rate/2, self.sample_rate/2)
-        self.visualise = visualise
+        self.params = params 
+        self.subsampling_method: Optional[SubsamplingStrategy] = subsampling
 
     def get_parameters(self, ins: GetParametersIns) -> GetParametersRes:
         _ = (self, ins)
@@ -60,9 +49,12 @@ class XgbClient(fl.client.Client):
     def _local_boost(self, bst_input: xgb.Booster):
         # Update trees based on local training data.
         for i in range(self.num_local_round):
-            preds = bst_input.predict(self.train_dmatrix, training=True)
-            new_train_dmatrix = self.subsampling_method.subsample(preds, self.train_dmatrix)
-            bst_input.update(new_train_dmatrix, bst_input.num_boosted_rounds())
+            if self.subsampling_method is None:
+                bst_input.update(self.train_dmatrix, bst_input.num_boosted_rounds())
+            else:
+                preds = bst_input.predict(self.train_dmatrix, training=True)
+                new_train_dmatrix = self.subsampling_method.subsample(preds, self.train_dmatrix)
+                bst_input.update(new_train_dmatrix, bst_input.num_boosted_rounds())
 
         # Bagging: extract the last N=num_local_round trees for server aggregation
         # Cyclic: return the entire model
@@ -71,8 +63,6 @@ class XgbClient(fl.client.Client):
                 bst_input.num_boosted_rounds()
                 - self.num_local_round : bst_input.num_boosted_rounds()
             ]
-            if self.train_method == "bagging"
-            else bst_input
         )
 
         return bst
@@ -97,12 +87,12 @@ class XgbClient(fl.client.Client):
         # Save model
         local_model = bst.save_raw("json")
         local_model_bytes = bytes(local_model)
-        byte_size = len(local_model_bytes)
+        # byte_size = len(local_model_bytes)
 
-        csv_file_name = f'_static/{global_round}.csv'
-        with open(csv_file_name, mode='a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow([byte_size])
+        # csv_file_name = f'_static/{global_round}.csv'
+        # with open(csv_file_name, mode='a', newline='') as file:
+        #    writer = csv.writer(file)
+        #    writer.writerow([byte_size])
 
         print("model bytes size: ", len(local_model_bytes))
         return FitRes(

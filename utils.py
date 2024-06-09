@@ -6,17 +6,22 @@ from flwr_datasets.partitioner import (
     SquarePartitioner,
     ExponentialPartitioner,
 )
+
+from subsampling.goss import GOSS
+from subsampling.mvs import MVS
+from subsampling.random import Random
+
 from typing import Dict
 from dataloader import Dataloader, CovertypeDataloader, HelenaDataloader, DionisDataloader, HiggsDataloader, RoadSafetyDataloader, JannisDataloader, WineQualityDataloader, AllstateClaimsSeverityDataloader, HouseSalesDataloader, DiamondsDataloader
 
-CORRELATION_TO_PARTITIONER = {
+PARTITIONER_MAPPING = {
     "uniform": IidPartitioner,
     "linear": LinearPartitioner,
     "square": SquarePartitioner,
     "exponential": ExponentialPartitioner,
 }
 
-DATALOADER_MAPPING: Dict[str, Partitioner] = {
+DATALOADER_MAPPING = {
     "covertype": CovertypeDataloader,
     "higgs": HiggsDataloader,
     "road_safety": RoadSafetyDataloader,
@@ -29,7 +34,6 @@ DATALOADER_MAPPING: Dict[str, Partitioner] = {
     "dionis": DionisDataloader,
 }
 
-
 def instantiate_dataloader(dataloader_type: str, partitioner: Partitioner) -> Dataloader:
     """Initialise dataloader based on selected dataloader type and additional
     keyword arguments."""
@@ -41,26 +45,39 @@ def instantiate_dataloader(dataloader_type: str, partitioner: Partitioner) -> Da
 def instantiate_partitioner(partitioner_type: str, num_partitions: int):
     """Initialise partitioner based on selected partitioner type and number of
     partitions."""
-    partitioner = CORRELATION_TO_PARTITIONER[partitioner_type](
+    partitioner = PARTITIONER_MAPPING[partitioner_type](
         num_partitions=num_partitions
     )
     return partitioner
+
+
+def instantiate_sampling_method(sampling_method: str, objective, sample_rate: float):
+    if sampling_method == "mvs":
+        return MVS(objective, sample_rate=sample_rate)
+    if sampling_method == "goss":
+        return GOSS(objective, sample_rate/2, sample_rate/2)
+    if sampling_method == "random":
+        return Random(objective, sample_rate)
 
 
 # Hyper-parameters for xgboost training
 NUM_LOCAL_ROUND = 1
 
 
-def client_args_parser():
-    """Parse arguments to define experimental settings on client side."""
+def generic_args_parser():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "--train-method",
-        default="bagging",
-        type=str,
-        choices=["bagging", "cyclic"],
-        help="Training methods selected from bagging aggregation or cyclic training.",
+        "--pool-size", default=2, type=int, help="Number of total clients."
+    )
+    parser.add_argument(
+        "--num-rounds", default=5, type=int, help="Number of FL rounds."
+    )
+    parser.add_argument(
+        "--num-clients-per-round",
+        default=2,
+        type=int,
+        help="Number of clients participate in training each round.",
     )
     parser.add_argument(
         "--num-partitions", default=10, type=int, help="Number of partitions."
@@ -77,10 +94,8 @@ def client_args_parser():
         default="covertype",
         type=str,
         choices=[
-            "covertype", "letter_recognition", "higgs", "road_safety", "mini_boone",
-            "eye_movements", "jannis", "california", "wine_quality", "superconduct",
-            "cpu_act", "delays_zurich_transport", "allstate_claims_severity", 
-            "house_sales", "diamonds"
+            "covertype", "helena", "dionis", "higgs", "road_safety", "jannis", 
+            "wine_quality", "allstate_claims_severity", "house_sales", "diamonds"
         ],
         help="Dataloader types.",
     )
@@ -96,159 +111,12 @@ def client_args_parser():
         type=float,
         help="Sampling rate .",
     )
-
     parser.add_argument(
-        "--seed", default=42, type=int, help="Seed used for train/test splitting."
-    )
-    parser.add_argument(
-        "--test-fraction",
-        default=0.2,
-        type=float,
-        help="Test fraction for train/test splitting.",
-    )
-    parser.add_argument(
-        "--centralised-eval",
-        action="store_true",
-        help="Conduct evaluation on centralised test set (True), or on hold-out data (False).",
-    )
-    parser.add_argument(
-        "--scaled-lr",
-        action="store_true",
-        help="Perform scaled learning rate based on the number of clients (True).",
-    )
-    parser.add_argument(
-        "--visualise",
-        action="store_true",
-        help="Conduct evaluation on centralised test set (True), or on hold-out data (False).",
-    )
-
-    args = parser.parse_args()
-    return args
-
-
-def server_args_parser():
-    """Parse arguments to define experimental settings on server side."""
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument(
-        "--train-method",
-        default="bagging",
+        "--sampling-method",
+        default="mvs",
         type=str,
-        choices=["bagging", "cyclic"],
-        help="Training methods selected from bagging aggregation or cyclic training.",
-    )
-    parser.add_argument(
-        "--pool-size", default=2, type=int, help="Number of total clients."
-    )
-    parser.add_argument(
-        "--num-rounds", default=5, type=int, help="Number of FL rounds."
-    )
-    parser.add_argument(
-        "--num-clients-per-round",
-        default=2,
-        type=int,
-        help="Number of clients participate in training each round.",
-    )
-    parser.add_argument(
-        "--num-evaluate-clients",
-        default=2,
-        type=int,
-        help="Number of clients selected for evaluation.",
-    )
-    parser.add_argument(
-        "--centralised-eval",
-        action="store_true",
-        help="Conduct centralised evaluation (True), or client evaluation on hold-out data (False).",
-    )
-
-    args = parser.parse_args()
-    return args
-
-
-def sim_args_parser():
-    """Parse arguments to define experimental settings on server side."""
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument(
-        "--train-method",
-        default="bagging",
-        type=str,
-        choices=["bagging", "cyclic"],
-        help="Training methods selected from bagging aggregation or cyclic training.",
-    )
-
-    # Server side
-    parser.add_argument(
-        "--pool-size", default=5, type=int, help="Number of total clients."
-    )
-    parser.add_argument(
-        "--num-rounds", default=30, type=int, help="Number of FL rounds."
-    )
-    parser.add_argument(
-        "--num-clients-per-round",
-        default=5,
-        type=int,
-        help="Number of clients participate in training each round.",
-    )
-    parser.add_argument(
-        "--num-evaluate-clients",
-        default=5,
-        type=int,
-        help="Number of clients selected for evaluation.",
-    )
-    parser.add_argument(
-        "--centralised-eval",
-        action="store_true",
-        help="Conduct centralised evaluation (True), or client evaluation on hold-out data (False).",
-    )
-    parser.add_argument(
-        "--num-cpus-per-client",
-        default=2,
-        type=int,
-        help="Number of CPUs used for per client.",
-    )
-
-    # Client side
-    parser.add_argument(
-        "--partitioner-type",
-        default="uniform",
-        type=str,
-        choices=["uniform", "linear", "square", "exponential"],
-        help="Partitioner types.",
-    )
-    parser.add_argument(
-        "--seed", default=42, type=int, help="Seed used for train/test splitting."
-    )
-    parser.add_argument(
-        "--test-fraction",
-        default=0.2,
-        type=float,
-        help="Test fraction for train/test splitting.",
-    )
-    parser.add_argument(
-        "--centralised-eval-client",
-        action="store_true",
-        help="Conduct evaluation on centralised test set (True), or on hold-out data (False).",
-    )
-    parser.add_argument(
-        "--scaled-lr",
-        action="store_true",
-        help="Perform scaled learning rate based on the number of clients (True).",
-    )
-
-    args = parser.parse_args()
-    return args
-
-
-def metrics_args_parser():
-    """Parse arguments to combine different metrics into one file."""
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument(
-        "--dataset",
-        type=str,
-        choices=["covertype", "higgs", "road_safety", "jannis", "wine_quality", "allstate_claims_severity", "house_sales", "diamonds", "helena", "dionis"],
-        help="Dataset you want to track its metric.",
+        choices=["mvs", "goss", "random", "native"],
+        help="Subsampling methods for running XGBoost.",
     )
 
     args = parser.parse_args()

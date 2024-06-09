@@ -1,13 +1,13 @@
 import os
 import re
 from collections import defaultdict
-from utils import metrics_args_parser
+from utils import generic_args_parser
 import matplotlib.pyplot as plt
 from typing import Dict, List
 
 def plot_result(data: Dict[float, List[float]], title: str, filename: str):
-    plt.figure(figsize=(15, 10))
-    for key, values in data.items():
+    plt.figure(figsize=(12, 8))
+    for key, values in sorted(data.items()):
         plt.plot(values, linewidth=2, label=key)
 
     fontsize = 18
@@ -15,9 +15,8 @@ def plot_result(data: Dict[float, List[float]], title: str, filename: str):
     plt.grid()
     plt.xticks(fontsize=fontsize)
     plt.yticks(fontsize=fontsize)
-    plt.title(title, fontsize=20)
+    plt.title(title, fontsize=fontsize)
     plt.xlabel('Rounds', fontsize=fontsize)
-    plt.ylabel('Evaluations', fontsize=fontsize)
 
     plt.tight_layout()
     plt.savefig(filename)
@@ -45,12 +44,11 @@ def read_convert_and_delete_files(dataset_prefix: str) -> None:
                 values = content.split(',')
             
             for value in values:
-                results[number_of_clients][sampling_method][partitioner_type][sampling_fraction].append(value)
+                results[number_of_clients][sampling_method][partitioner_type][sampling_fraction].append(float(value))
             
             os.remove(os.path.join(directory, filename))
     
     with open(output_file, 'w') as file:
-        print(results)
         for number_of_clients, methods in results.items():
             for sampling_method, partitioners in methods.items():
                 for partitioner_type, fractions in partitioners.items():
@@ -70,10 +68,10 @@ def read_convert_and_delete_files(dataset_prefix: str) -> None:
                     plot_result(fractions, title, filename)
 
                     for sampling_fraction, contents in sorted(fractions.items()):
-                        file.write(f'    {sampling_fraction}: {','.join(map(str, contents))},\n')
+                        file.write(f'    {sampling_fraction}: [{','.join(map(str, contents))}],\n')
                             
                     file.write('}\n\n')
 
-args = metrics_args_parser()
+args = generic_args_parser()
 
-read_convert_and_delete_files(args.dataset)
+read_convert_and_delete_files(args.dataloader)
