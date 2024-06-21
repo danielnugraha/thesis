@@ -156,3 +156,18 @@ class YearPredictionMsdDataloader(RegressionDataloader):
         y = data['year']
         new_data = xgb.DMatrix(x, label=y)
         return new_data
+    
+    def get_objective(self):
+        return rmsle_obj
+
+    def get_params(self):
+        return {
+            "objective": "reg:squaredlogerror",
+            "eta": 0.1,  # Learning rate
+            "max_depth": 8,
+            "eval_metric": "rmsle",
+            "nthread": 16,
+            "num_parallel_tree": 1,
+            "subsample": 1,
+            "tree_method": "hist",
+        }
