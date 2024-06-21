@@ -11,6 +11,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.io import arff
+import openml
 
 class RegressionDataloader(Dataloader):
     def __init__(self, dataset_name: str) -> None:
@@ -127,5 +128,31 @@ class DiamondsDataloader(RegressionDataloader):
         x_arrays = list(x_dict.values())
         x = np.stack(x_arrays, axis=1)
         y = data['price']
+        new_data = xgb.DMatrix(x, label=y)
+        return new_data
+
+
+class YearPredictionMsdDataloader(RegressionDataloader):
+
+    def __init__(self, partitioner: Partitioner) -> None:
+        super().__init__("year_prediction_msd")
+        data, _, _, _ = openml.datasets.get_dataset(44027).get_data()
+        self.dataset = Dataset.from_pandas(data)
+        self.partitioner = partitioner
+        self.partitioner.dataset = self.dataset
+
+    def _get_partition(self, node_id: Optional[int] = None, split: Optional[str] = None) -> Dataset:
+        if node_id is None:
+            partition = self.dataset
+        else:
+            partition = partition = self.partitioner.load_partition(node_id=node_id)
+        
+        return partition
+
+    def _transform_dataset_to_dmatrix(self, data: Union[Dataset, DatasetDict]) -> xgb.core.DMatrix:
+        x_dict = data.with_format("np", ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48', '49', '50', '51', '52', '53', '54', '55', '56', '57', '58', '59', '60', '61', '62', '63', '64', '65', '66', '67', '68', '69', '70', '71', '72', '73', '74', '75', '76', '77', '78', '79', '80', '81', '82', '83', '84', '85', '86', '87', '88', '89', '90'])[:]
+        x_arrays = list(x_dict.values())
+        x = np.stack(x_arrays, axis=1)
+        y = data['year']
         new_data = xgb.DMatrix(x, label=y)
         return new_data

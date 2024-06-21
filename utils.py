@@ -12,7 +12,7 @@ from subsampling.mvs import MVS
 from subsampling.random import Random
 
 from typing import Dict
-from dataloader import Dataloader, CovertypeDataloader, HelenaDataloader, DionisDataloader, HiggsDataloader, RoadSafetyDataloader, JannisDataloader, WineQualityDataloader, AllstateClaimsSeverityDataloader, HouseSalesDataloader, DiamondsDataloader
+from dataloader import Dataloader, CovertypeDataloader, YearPredictionMsdDataloader, CompasDataloader, HelenaDataloader, DionisDataloader, HiggsDataloader, RoadSafetyDataloader, JannisDataloader, WineQualityDataloader, AllstateClaimsSeverityDataloader, HouseSalesDataloader, DiamondsDataloader
 
 PARTITIONER_MAPPING = {
     "uniform": IidPartitioner,
@@ -25,13 +25,14 @@ DATALOADER_MAPPING = {
     "covertype": CovertypeDataloader,
     "higgs": HiggsDataloader,
     "road_safety": RoadSafetyDataloader,
-    "jannis": JannisDataloader,
+    "compas": CompasDataloader,
     "wine_quality": WineQualityDataloader,
     "allstate_claims_severity": AllstateClaimsSeverityDataloader,
     "house_sales": HouseSalesDataloader,
     "diamonds": DiamondsDataloader,
     "helena": HelenaDataloader,
     "dionis": DionisDataloader,
+    "year_prediction_msd": YearPredictionMsdDataloader,
 }
 
 def instantiate_dataloader(dataloader_type: str, partitioner: Partitioner) -> Dataloader:
@@ -94,7 +95,7 @@ def generic_args_parser():
         default="covertype",
         type=str,
         choices=[
-            "covertype", "helena", "dionis", "higgs", "road_safety", "jannis", 
+            "covertype", "helena", "dionis", "higgs", "road_safety", "year_prediction_msd", 
             "wine_quality", "allstate_claims_severity", "house_sales", "diamonds"
         ],
         help="Dataloader types.",

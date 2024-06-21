@@ -107,3 +107,27 @@ class JannisDataloader(BinaryDataloader):
         y = data['class']
         new_data = xgb.DMatrix(x, label=y)
         return new_data
+
+
+class CompasDataloader(BinaryDataloader):
+    def __init__(self, partitioner: Partitioner) -> None:
+        super().__init__("jannis")
+        self.dataset = load_dataset("inria-soda/tabular-benchmark", data_files="clf_cat/compas-two-years.csv")["train"]
+        partitioner.dataset = self.dataset
+        self.partitioner = partitioner
+
+    def _get_partition(self, node_id: Optional[int] = None, split: Optional[str] = None) -> Dataset:
+        if node_id is None:
+            partition = self.dataset
+        else:
+            partition = partition = self.partitioner.load_partition(node_id=node_id)
+        return partition
+
+    def _transform_dataset_to_dmatrix(self, data: Union[Dataset, DatasetDict]) -> xgb.core.DMatrix:
+        x_dict = data.with_format("np", ['sex', 'age', 'juv_misd_count', 'priors_count', 'age_cat_25-45', 'age_cat_Greaterthan45', 'age_cat_Lessthan25', 'race_African-American', 'race_Caucasian', 'c_charge_degree_F', 'c_charge_degree_M'])[:]
+        x_arrays = list(x_dict.values())
+        x = np.stack(x_arrays, axis=1)
+        y = data['twoyearrecid']
+        new_data = xgb.DMatrix(x, label=y)
+        return new_data
+    

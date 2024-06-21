@@ -73,6 +73,7 @@ class HelenaDataloader(MulticlassDataloader):
         data['class'] = data['class'].astype('object')
         self.dataset = Dataset.from_pandas(data)
         self.partitioner = partitioner
+        self.partitioner.dataset = self.dataset
 
     def _get_partition(self, node_id: Optional[int] = None, split: Optional[str] = None) -> Dataset:
         if node_id is None:
@@ -87,7 +88,7 @@ class HelenaDataloader(MulticlassDataloader):
         x_arrays = list(x_dict.values())
         x = np.stack(x_arrays, axis=1)
         y = data['class']
-        y_int = np.array([int(element.decode('utf-8')) for element in y])
+        y_int = np.array([int(element) for element in y])
         new_data = xgb.DMatrix(x, label=y_int)
         return new_data
 

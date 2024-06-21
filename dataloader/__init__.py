@@ -1,7 +1,7 @@
 from .dataloader import Dataloader
-from .binary_dataloader import HiggsDataloader, RoadSafetyDataloader, JannisDataloader
+from .binary_dataloader import HiggsDataloader, RoadSafetyDataloader, JannisDataloader, CompasDataloader
 from .multiclass_dataloader import CovertypeDataloader, DionisDataloader, HelenaDataloader
-from .regression_dataloader import WineQualityDataloader, AllstateClaimsSeverityDataloader, HouseSalesDataloader, DiamondsDataloader
+from .regression_dataloader import WineQualityDataloader, AllstateClaimsSeverityDataloader, HouseSalesDataloader, DiamondsDataloader, YearPredictionMsdDataloader
 
 __all__ = [
     "Dataloader",
@@ -14,5 +14,7 @@ __all__ = [
     "WineQualityDataloader", 
     "AllstateClaimsSeverityDataloader", 
     "HouseSalesDataloader", 
-    "DiamondsDataloader"
+    "DiamondsDataloader",
+    "CompasDataloader",
+    "YearPredictionMsdDataloader",
 ]
