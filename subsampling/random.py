@@ -22,7 +22,7 @@ class Random(SubsamplingStrategy):
         return new_train_dmatrix
 
     def subsample(self, predictions: np.ndarray, train_dmatrix: xgb.DMatrix) -> xgb.DMatrix:
-        subsample_indices = np.random.choice(len(predictions), len(predictions) * self.sample_rate, replace=False)
+        subsample_indices = np.random.choice(len(predictions), int(len(predictions) * self.sample_rate), replace=False)
 
         new_train_dmatrix = train_dmatrix.slice(subsample_indices)
 

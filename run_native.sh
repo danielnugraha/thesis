@@ -3,9 +3,6 @@ set -e
 
 ls
 
-./run_bagging.sh 1,3,5,10 uniform,linear house16H 100 mvs,goss,random,native
-wait
-
 ./run_bagging.sh 1,3,5,10 uniform,linear covertype,dionis,higgs,allstate_claims_severity 200 native
 wait
 
