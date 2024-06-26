@@ -12,7 +12,7 @@ from subsampling.mvs import MVS
 from subsampling.random import Random
 
 from typing import Dict
-from dataloader import Dataloader, CovertypeDataloader, YearPredictionMsdDataloader, CompasDataloader, HelenaDataloader, DionisDataloader, HiggsDataloader, RoadSafetyDataloader, JannisDataloader, WineQualityDataloader, AllstateClaimsSeverityDataloader, HouseSalesDataloader, DiamondsDataloader
+from dataloader import Dataloader, CodrnaDataloader, AbaloneDataloader, AirlinesDataloader, CovertypeDataloader, YearPredictionMsdDataloader, CompasDataloader, HelenaDataloader, DionisDataloader, HiggsDataloader, RoadSafetyDataloader, JannisDataloader, WineQualityDataloader, AllstateClaimsSeverityDataloader, HouseSalesDataloader, DiamondsDataloader
 
 PARTITIONER_MAPPING = {
     "uniform": IidPartitioner,
@@ -33,6 +33,10 @@ DATALOADER_MAPPING = {
     "helena": HelenaDataloader,
     "dionis": DionisDataloader,
     "year_prediction_msd": YearPredictionMsdDataloader,
+    "airlines": AirlinesDataloader,
+    "abalone": AbaloneDataloader,
+    "jannis": JannisDataloader,
+    "codrna": CodrnaDataloader,
 }
 
 def instantiate_dataloader(dataloader_type: str, partitioner: Partitioner) -> Dataloader:
@@ -96,7 +100,8 @@ def generic_args_parser():
         type=str,
         choices=[
             "covertype", "helena", "dionis", "higgs", "road_safety", "year_prediction_msd", 
-            "wine_quality", "allstate_claims_severity", "house_sales", "diamonds"
+            "wine_quality", "allstate_claims_severity", "house_sales", "diamonds", "airlines",
+            "abalone", "jannis", "codrna",
         ],
         help="Dataloader types.",
     )

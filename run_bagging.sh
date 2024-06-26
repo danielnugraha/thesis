@@ -84,3 +84,10 @@ for dataloader in "${DATALOADERS[@]}"; do
     done
     python3 measure_metrics.py --dataloader $dataloader
 done
+
+# delete features fromo higgs rerun
+# zip files and send to William
+# also plot the correlation matrix
+# finish the covertype experiment and send to William
+# 1 more dataset check from Slack chat
+# communication cost and training time plot

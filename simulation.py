@@ -1,4 +1,4 @@
-from dataloader import Dataloader, CovertypeDataloader, HelenaDataloader, CompasDataloader, DionisDataloader, HiggsDataloader, RoadSafetyDataloader, JannisDataloader, WineQualityDataloader, AllstateClaimsSeverityDataloader, HouseSalesDataloader, DiamondsDataloader, YearPredictionMsdDataloader
+from dataloader import Dataloader, CodrnaDataloader, CustomerChurnDataloader, AbaloneDataloader, FairJobDataloader, CovertypeDataloader, HelenaDataloader, AirlinesDataloader, CompasDataloader, DionisDataloader, HiggsDataloader, RoadSafetyDataloader, JannisDataloader, WineQualityDataloader, AllstateClaimsSeverityDataloader, HouseSalesDataloader, DiamondsDataloader, YearPredictionMsdDataloader
 from flwr_datasets.partitioner import ExponentialPartitioner
 from subsampling.mvs import MVS
 import xgboost as xgb
@@ -60,7 +60,7 @@ def mvs_simulation_centralized():
 
 def load_dataset_try():
     num_clients = 5
-    dataset = YearPredictionMsdDataloader(ExponentialPartitioner(num_clients))
+    dataset = CodrnaDataloader(ExponentialPartitioner(num_clients))
     train_dmatrix, _ = dataset.get_train_dmatrix(0)
     test_dmatrix, _ = dataset.get_test_dmatrix(None)
 
