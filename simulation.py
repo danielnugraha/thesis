@@ -4,6 +4,7 @@ from subsampling.mvs import MVS
 import xgboost as xgb
 import os
 import csv
+import numpy as np
 
 import matplotlib.pyplot as plt
 
@@ -60,13 +61,14 @@ def mvs_simulation_centralized():
 
 def load_dataset_try():
     num_clients = 5
-    dataset = CodrnaDataloader(ExponentialPartitioner(num_clients))
+    dataset = HiggsDataloader(ExponentialPartitioner(num_clients))
     train_dmatrix, _ = dataset.get_train_dmatrix(0)
+    print(train_dmatrix.get_data().get_shape()[1])
     test_dmatrix, _ = dataset.get_test_dmatrix(None)
 
 def dataset_analysis():
     num_clients = 5
-    dataset = DionisDataloader(ExponentialPartitioner(num_clients))
+    dataset = HiggsDataloader(ExponentialPartitioner(num_clients))
     dataset.dataset_analysis()
 
 def visualise():
@@ -100,11 +102,12 @@ def visualise():
     plt.savefig('_static/wine_quality_mvs_10_uniform_50.png')
 
 load_dataset_try()
+
 # visualise()
 
 # mvs_simulation_centralized()
 
-# dataset_analysis()
+dataset_analysis()
 
 def calculate_average(filename):
     with open(filename, 'r') as file:

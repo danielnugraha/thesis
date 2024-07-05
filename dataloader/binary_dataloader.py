@@ -27,6 +27,8 @@ class BinaryDataloader(Dataloader):
             "nthread": 16,
             "num_parallel_tree": 1,
             "subsample": 1,
+            "alpha": 3,
+            "gamma": 3,
             "tree_method": "hist",
         }
 
@@ -52,6 +54,7 @@ class HiggsDataloader(BinaryDataloader):
 
     def _transform_dataset_to_dmatrix(self, data: Union[Dataset, DatasetDict]) -> xgb.core.DMatrix:
         x = data["inputs"]
+        x = np.delete(x, [2,4,7,11,15,19], axis=1)
         y = data["label"]
         new_data = xgb.DMatrix(x, label=y)
         return new_data
@@ -60,6 +63,9 @@ class HiggsDataloader(BinaryDataloader):
         df = partition.to_pandas()
         inputs_expanded = pd.DataFrame(df['inputs'].tolist(), columns=[f'feature_{i+1}' for i in range(28)])
         df = df.drop(columns=['inputs']).join(inputs_expanded)
+        columns_to_delete = [2, 4, 7, 11, 15, 19]
+        columns_to_delete = [f'feature_{i+1}' for i in columns_to_delete]
+        df = df.drop(columns=columns_to_delete)
         return df
     
 

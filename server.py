@@ -1,17 +1,108 @@
 import warnings
 from logging import INFO
-from flwr.common import Parameters, Scalar
-from typing import Dict
+from flwr.common import FitRes, Parameters, Scalar
+from typing import Dict, List, Tuple, Union, Optional, cast
 import json
 import flwr as fl
 from flwr.common.logger import log
+from flwr.server.client_proxy import ClientProxy
 from flwr_datasets import FederatedDataset, partitioner
 from flwr.server.strategy import FedXgbBagging, FedXgbCyclic
-
+import numpy as np
 from utils import generic_args_parser
 import xgboost as xgb
+import math
+import os
+import random
 
 warnings.filterwarnings("ignore", category=UserWarning)
+
+class CustomFedXgbBagging(FedXgbBagging):
+    def aggregate_fit(
+        self,
+        server_round: int,
+        results: List[Tuple[ClientProxy, FitRes]],
+        failures: List[Union[Tuple[ClientProxy, FitRes], BaseException]],
+    ) -> Tuple[Optional[Parameters], Dict[str, Scalar]]:
+        """Aggregate fit results using bagging."""
+        if not results:
+            return None, {}
+        # Do not aggregate if there are failures and failures are not accepted
+        if not self.accept_failures and failures:
+            return None, {}
+
+        # Aggregate all the client trees
+        global_model = self.global_model
+        for _, fit_res in results:
+            update = fit_res.parameters.tensors
+            for bst in update:
+                random_number = random.random()
+                print(random_number)
+                if random_number > 0.5:
+                    global_model = aggregate(global_model, bst)
+
+        self.global_model = global_model
+
+        return (
+            Parameters(tensor_type="", tensors=[cast(bytes, global_model)]),
+            {},
+        )
+
+
+def aggregate(
+    bst_prev_org: Optional[bytes],
+    bst_curr_org: bytes,
+) -> bytes:
+    """Conduct bagging aggregation for given trees."""
+    if not bst_prev_org:
+        return bst_curr_org
+
+    # Get the tree numbers
+    tree_num_prev, _ = _get_tree_nums(bst_prev_org)
+    _, paral_tree_num_curr = _get_tree_nums(bst_curr_org)
+
+    bst_prev = json.loads(bytearray(bst_prev_org))
+    bst_curr = json.loads(bytearray(bst_curr_org))
+
+    bst_prev["learner"]["gradient_booster"]["model"]["gbtree_model_param"][
+        "num_trees"
+    ] = str(tree_num_prev + paral_tree_num_curr)
+    iteration_indptr = bst_prev["learner"]["gradient_booster"]["model"][
+        "iteration_indptr"
+    ]
+    bst_prev["learner"]["gradient_booster"]["model"]["iteration_indptr"].append(
+        iteration_indptr[-1] + paral_tree_num_curr
+    )
+
+    # Aggregate new trees
+    trees_curr = bst_curr["learner"]["gradient_booster"]["model"]["trees"]
+    for tree_count in range(paral_tree_num_curr):
+        trees_curr[tree_count]["id"] = tree_num_prev + tree_count
+        bst_prev["learner"]["gradient_booster"]["model"]["trees"].append(
+            trees_curr[tree_count]
+        )
+        bst_prev["learner"]["gradient_booster"]["model"]["tree_info"].append(0)
+
+    bst_prev_bytes = bytes(json.dumps(bst_prev), "utf-8")
+
+    return bst_prev_bytes
+
+
+def _get_tree_nums(xgb_model_org: bytes) -> Tuple[int, int]:
+    xgb_model = json.loads(bytearray(xgb_model_org))
+    # Get the number of trees
+    tree_num = int(
+        xgb_model["learner"]["gradient_booster"]["model"]["gbtree_model_param"][
+            "num_trees"
+        ]
+    )
+    # Get the number of parallel trees
+    paral_tree_num = int(
+        xgb_model["learner"]["gradient_booster"]["model"]["gbtree_model_param"][
+            "num_parallel_tree"
+        ]
+    )
+    return tree_num, paral_tree_num
 
 # Parse arguments for experimental settings
 args = generic_args_parser()
@@ -46,9 +137,10 @@ num_rounds_elapsed = 1
 def evaluate_metrics_aggregation(eval_metrics):
     """Return an aggregated metric (AUC) for evaluation."""
     global num_rounds_elapsed, evals
-    total_num = sum([num for num, _ in eval_metrics])
+    filtered_metrics = [(num, metrics) for num, metrics in eval_metrics if not math.isnan(metrics["AUC"])]
+    total_num = sum([num for num, _ in filtered_metrics])
     auc_aggregated = (
-        sum([metrics["AUC"] * num for num, metrics in eval_metrics]) / total_num
+        sum([metrics["AUC"] * num for num, metrics in filtered_metrics]) / total_num
     )
 
     evals.append(round(auc_aggregated, 4))
@@ -58,6 +150,19 @@ def evaluate_metrics_aggregation(eval_metrics):
         print("Writing to a file")
         with open(f'_static/{dataloader_str}_{sampling_method}_{partitioner_type}_{sample_rate}_{num_clients_per_round}.txt', 'w') as file:
             file.write(','.join(map(str, evals)))
+        
+        if sampling_method == 'mvs':
+            print("writing model sizes to a file")
+            model_sizes = []
+            for i in range(1, num_rounds+1):
+                file_path = f'_static/{i}.csv'
+                data = np.loadtxt(file_path, delimiter=',')
+                average_size = np.mean(data)
+                model_sizes.append(round(average_size, 3))
+                os.remove(file_path)
+
+            with open(f'_static/{dataloader_str}_{sampling_method}_{partitioner_type}_{sample_rate}_{num_clients_per_round}_size.txt', 'w') as file:
+                file.write(','.join(map(str, model_sizes)))
                 
     num_rounds_elapsed += 1
     

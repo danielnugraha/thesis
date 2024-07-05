@@ -30,6 +30,8 @@ class MulticlassDataloader(Dataloader):
             "nthread": 16,
             "num_parallel_tree": 1,
             "subsample": 1,
+            "alpha": 3,
+            "gamma": 3,
             "tree_method": "hist",
             "num_class": self.num_classes,
         }

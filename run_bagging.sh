@@ -82,7 +82,6 @@ for dataloader in "${DATALOADERS[@]}"; do
             done
         done
     done
-    python3 measure_metrics.py --dataloader $dataloader
 done
 
 # delete features fromo higgs rerun

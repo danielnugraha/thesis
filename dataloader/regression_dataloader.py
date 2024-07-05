@@ -29,6 +29,8 @@ class RegressionDataloader(Dataloader):
             "nthread": 16,
             "num_parallel_tree": 1,
             "subsample": 1,
+            "alpha": 3,
+            "gamma": 3,
             "tree_method": "hist",
         }
 
@@ -59,6 +61,21 @@ class WineQualityDataloader(RegressionDataloader):
         new_data = xgb.DMatrix(x, label=y)
         return new_data
     
+    def get_params(self):
+        return {
+            "objective": "reg:squarederror",
+            "eta": 0.1,  # Learning rate
+            "max_depth": 8,
+            "eval_metric": "rmse",
+            "nthread": 16,
+            "num_parallel_tree": 1,
+            "subsample": 1,
+            "alpha": 5,
+            "lambda": 5,
+            "gamma": 5,
+            "tree_method": "hist",
+        }
+
 
 class AllstateClaimsSeverityDataloader(RegressionDataloader):
     def __init__(self, partitioner: Partitioner) -> None:
@@ -106,6 +123,20 @@ class HouseSalesDataloader(RegressionDataloader):
         y = data['price']
         new_data = xgb.DMatrix(x, label=y)
         return new_data
+    
+    def get_params(self):
+        return {
+            "objective": "reg:squarederror",
+            "eta": 0.1,  # Learning rate
+            "max_depth": 6,
+            "eval_metric": "rmse",
+            "nthread": 16,
+            "num_parallel_tree": 1,
+            "subsample": 1,
+            "alpha": 5,
+            "gamma": 5,
+            "tree_method": "hist",
+        }
 
 
 class DiamondsDataloader(RegressionDataloader):
@@ -130,6 +161,20 @@ class DiamondsDataloader(RegressionDataloader):
         y = data['price']
         new_data = xgb.DMatrix(x, label=y)
         return new_data
+    
+    def get_params(self):
+        return {
+            "objective": "reg:squarederror",
+            "eta": 0.1,  # Learning rate
+            "max_depth": 6,
+            "eval_metric": "rmse",
+            "nthread": 16,
+            "num_parallel_tree": 1,
+            "subsample": 1,
+            "alpha": 3,
+            "gamma": 3,
+            "tree_method": "hist",
+        }
 
 
 class YearPredictionMsdDataloader(RegressionDataloader):

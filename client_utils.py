@@ -2,6 +2,7 @@ from logging import INFO
 import xgboost as xgb
 from subsampling.subsampling_strategy import SubsamplingStrategy
 import flwr as fl
+import csv
 from flwr.common.logger import log
 from flwr.common import (
     Code,
@@ -87,12 +88,12 @@ class XgbClient(fl.client.Client):
         # Save model
         local_model = bst.save_raw("json")
         local_model_bytes = bytes(local_model)
-        # byte_size = len(local_model_bytes)
+        byte_size = len(local_model_bytes)
 
-        # csv_file_name = f'_static/{global_round}.csv'
-        # with open(csv_file_name, mode='a', newline='') as file:
-        #    writer = csv.writer(file)
-        #    writer.writerow([byte_size])
+        csv_file_name = f'_static/{global_round}.csv'
+        with open(csv_file_name, mode='a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([byte_size])
 
         print("model bytes size: ", len(local_model_bytes))
         return FitRes(
