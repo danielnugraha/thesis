@@ -6,6 +6,7 @@ from typing import Optional, Tuple
 from flwr_datasets.partitioner import IidPartitioner
 from visualization import plot_tree, plot_labels
 import matplotlib.pyplot as plt
+import csv
 
 def calculate_threshold(candidates, sum_small, num_large, sample_size):
     threshold = candidates[0]
@@ -56,11 +57,20 @@ class MVS(SubsamplingStrategy):
         new_train_dmatrix = train_dmatrix.slice(indices)
         return new_train_dmatrix
 
-    def subsample(self, predictions: np.ndarray, train_dmatrix: xgb.DMatrix, indices: Optional[np.ndarray] = None) -> xgb.DMatrix:
+    def subsample(self, predictions: np.ndarray, train_dmatrix: xgb.DMatrix, indices: Optional[np.ndarray] = None, threshold: Optional[int] = None, x: Optional[int] = None, y: Optional[int] = None) -> xgb.DMatrix:
         if indices is None:
             indices = self.subsample_indices(predictions, train_dmatrix)
-        
+
         new_train_dmatrix = train_dmatrix.slice(indices)
+
+        if x is not None and y is not None:
+            x_data = new_train_dmatrix.get_data()[:, 0].toarray()
+            y_data = new_train_dmatrix.get_data()[:, 1].toarray()
+
+            with open(f'_static/mvs_{self.sample_rate}_indices.csv', mode='a', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(x_data)
+                writer.writerow(y_data)
 
         self.subsample_indices_cache = None
 

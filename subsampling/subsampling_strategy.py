@@ -11,7 +11,7 @@ class SubsamplingStrategy(ABC):
         pass
 
     @abstractmethod
-    def subsample(self, predictions: np.ndarray, train_dmatrix: xgb.DMatrix, indices: Optional[np.ndarray] = None, threshold: Optional[int] = None) -> xgb.DMatrix:
+    def subsample(self, predictions: np.ndarray, train_dmatrix: xgb.DMatrix, indices: Optional[np.ndarray] = None, threshold: Optional[int] = None, x: Optional[int] = None, y: Optional[int] = None) -> xgb.DMatrix:
         pass
 
     @abstractmethod

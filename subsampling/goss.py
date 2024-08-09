@@ -4,6 +4,7 @@ from subsampling.subsampling_strategy import SubsamplingStrategy
 from visualization import plot_tree, plot_labels
 from flwr_datasets.partitioner import IidPartitioner
 from typing import Optional, Tuple
+import csv
 
 
 # start learning after 1.0 / learning rate
@@ -73,7 +74,7 @@ class GOSS(SubsamplingStrategy):
         new_train_dmatrix = train_dmatrix.slice(indices)
         return new_train_dmatrix
 
-    def subsample(self, predictions: np.ndarray, train_dmatrix: xgb.DMatrix) -> xgb.DMatrix:
+    def subsample(self, predictions: np.ndarray, train_dmatrix: xgb.DMatrix, x: Optional[int] = None, y: Optional[int] = None) -> xgb.DMatrix:
         fact = (1 - self.a) / self.b
         topN = self.a * train_dmatrix.num_row()
         randN = self.b * train_dmatrix.num_row()
@@ -85,6 +86,11 @@ class GOSS(SubsamplingStrategy):
         topSet = sorted_indices[:int(topN)]
         randSet = np.random.choice(sorted_indices[int(topN):], int(randN), replace=False)
         usedSet = np.concatenate([topSet, randSet])
+
+        with open(f'_static/goss_{self.sample_rate}_indices.csv', mode='a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(usedSet)
+        
         weights[randSet] *= fact
         new_train_dmatrix = train_dmatrix.slice(usedSet)
         new_train_dmatrix.set_weight(weights[usedSet])

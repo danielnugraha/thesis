@@ -4,6 +4,7 @@ from subsampling.subsampling_strategy import SubsamplingStrategy
 from visualization import plot_tree, plot_labels
 from flwr_datasets.partitioner import IidPartitioner
 from typing import Optional, Tuple
+import csv
 
 class Random(SubsamplingStrategy):
 
@@ -21,8 +22,12 @@ class Random(SubsamplingStrategy):
         new_train_dmatrix = train_dmatrix.slice(indices)
         return new_train_dmatrix
 
-    def subsample(self, predictions: np.ndarray, train_dmatrix: xgb.DMatrix) -> xgb.DMatrix:
+    def subsample(self, predictions: np.ndarray, train_dmatrix: xgb.DMatrix, x: Optional[int] = None, y: Optional[int] = None) -> xgb.DMatrix:
         subsample_indices = np.random.choice(len(predictions), int(len(predictions) * self.sample_rate), replace=False)
+
+        with open(f'_static/random_{self.sample_rate}_indices.csv', mode='a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(subsample_indices)
 
         new_train_dmatrix = train_dmatrix.slice(subsample_indices)
 

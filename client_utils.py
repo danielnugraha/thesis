@@ -54,7 +54,16 @@ class XgbClient(fl.client.Client):
                 bst_input.update(self.train_dmatrix, bst_input.num_boosted_rounds())
             else:
                 preds = bst_input.predict(self.train_dmatrix, training=True)
-                new_train_dmatrix = self.subsampling_method.subsample(preds, self.train_dmatrix)
+                important_features = bst_input.get_score(importance_type='gain')
+
+                sorted_features = sorted(important_features.items(), key=lambda x: x[1], reverse=True)
+
+                highest_2_features = sorted_features[:2]
+                if len(highest_2_features) < 2:
+                    x, y = 0, 1
+                else:
+                    x, y = tuple(int(key.replace('f', '')) for key, value in highest_2_features)
+                new_train_dmatrix = self.subsampling_method.subsample(preds, self.train_dmatrix, x=x, y=y)
                 bst_input.update(new_train_dmatrix, bst_input.num_boosted_rounds())
 
         # Bagging: extract the last N=num_local_round trees for server aggregation

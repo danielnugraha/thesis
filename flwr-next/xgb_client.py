@@ -87,8 +87,15 @@ class XGBClientAdaptive():
         preds = self.bst.predict(self.train_dmatrix, output_margin=True, training=True)
         subsample = self.subsampling_method.subsample(preds, self.train_dmatrix)
         self.bst.update(subsample, self.bst.num_boosted_rounds())
+
+        bst = (
+            self.bst[
+                self.bst.num_boosted_rounds()
+                - self.num_local_round : self.num_boosted_rounds()
+            ]
+        )
         
-        local_model = self.bst.save_raw("json")
+        local_model = bst.save_raw("json")
         local_model_bytes = bytes(local_model)
 
         return local_model_bytes

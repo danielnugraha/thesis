@@ -22,7 +22,7 @@ class BinaryDataloader(Dataloader):
         return {
             "objective": "binary:logistic",
             "eta": 0.1,  # Learning rate
-            "max_depth": 8,
+            "max_depth": 6,
             "eval_metric": "auc",
             "nthread": 16,
             "num_parallel_tree": 1,

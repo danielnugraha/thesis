@@ -17,7 +17,7 @@ partitioner = instantiate_partitioner(
 dataloader = instantiate_dataloader(dataloader_str, partitioner)
 
 train_dmatrix, num_train, = dataloader.get_train_dmatrix()
-valid_dmatrix, num_val = dataloader.get_test_dmatrix()
+valid_dmatrix, num_val = dataloader.get_test_dmatrix(None)
 
 for sample_rate in sample_rates:
     subsampling_strategy = instantiate_sampling_method(sampling_method, dataloader.get_objective(), sample_rate)

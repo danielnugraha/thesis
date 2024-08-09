@@ -2,6 +2,7 @@ from flwr.client import ClientApp
 from flwr.common import Message, Context, RecordSet, ConfigsRecord, ParametersRecord, Array, MetricsRecord
 from .xgb_client import XGBClientAdaptive
 from .env import DATASET, SUBSAMPLING, NUM_LOCAL_ROUND, SAMPLE_RATE
+from typing import Optional
 
 app = ClientApp()
 
@@ -13,7 +14,7 @@ client = XGBClientAdaptive(
 
 @app.train()
 def train(msg: Message, ctx: Context):
-    threshold: int = msg.content.configs_records["config"].get("threshold", None)
+    threshold: Optional[int] = msg.content.configs_records["config"].get("threshold", None)
     partition_id: int = msg.content.configs_records["config"]["partition_id"]
 
     parameters = []

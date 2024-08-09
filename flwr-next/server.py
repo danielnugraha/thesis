@@ -21,7 +21,7 @@ from .env import SUBSAMPLING, DATASET, NUM_TRAIN_CLIENTS, NUM_ROUNDS
 subsampling = SUBSAMPLING
 dataset = DATASET
 num_clients = NUM_TRAIN_CLIENTS
-num_rounds = 2
+num_rounds = NUM_ROUNDS
 
 # Run via `flower-server-app server:app`
 app = fl.server.ServerApp()
